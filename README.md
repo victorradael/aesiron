@@ -1,6 +1,4 @@
-# AIQTudo - Development Tools
-
-Um conjunto de ferramentas de desenvolvimento para o aiqfome.
+# Aesiron
 
 ## 📋 Requisitos
 

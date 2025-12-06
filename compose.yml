@@ -1,0 +1,17 @@
+networks:
+  aiqdocker-net:
+    external: true
+
+services:
+  example:
+    build: ./apps/example
+    image: app-aiqtudo-example
+    container_name: app-aiqtudo-example
+    volumes:
+      - ./apps/example/app:/app
+    ports:
+      - "8501:8501"
+    env_file:
+      - ./apps/example/.env
+    networks:
+      - aiqdocker-net

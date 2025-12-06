@@ -1,5 +1,5 @@
 networks:
-  aiqdocker-net:
+  aesiron-net:
     external: true
 
 services:
@@ -14,4 +14,4 @@ services:
     env_file:
       - ./apps/example/.env
     networks:
-      - aiqdocker-net
+      - aesiron-net

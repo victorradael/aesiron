@@ -1,6 +1,6 @@
 # Variáveis
 COMPOSE := docker compose
-NETWORK_NAME := aiqdocker-net
+NETWORK_NAME := aesiron-net
 
 # Targets principais
 .PHONY: setup-dev run dev down logs app remove-app
@@ -18,7 +18,7 @@ define COMPOSE_SERVICE_TEMPLATE
     env_file:
       - ./apps/{{APP_NAME}}/.env
     networks:
-      - aiqdocker-net
+      - aesiron-net
 endef
 export COMPOSE_SERVICE_TEMPLATE
 
@@ -75,7 +75,7 @@ remove:
 	@echo "Removing app directory..."
 	@rm -rf apps/$(APP_NAME)
 	@echo "Removing service from compose.yml..."
-	@sed -i '/^[[:space:]]*$(APP_NAME):/,/[[:space:]]*- aiqdocker-net/d' compose.yml
+	@sed -i '/^[[:space:]]*$(APP_NAME):/,/[[:space:]]*- aesiron-net/d' compose.yml
 	@sed -i '/^$$/N;/^\n$$/D' compose.yml  # Remove linhas em branco duplicadas
 	@echo "App $(APP_NAME) removed successfully!"
 	@echo "Don't forget to run 'make down' and 'make run' to apply the changes"

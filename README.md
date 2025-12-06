@@ -111,7 +111,7 @@ Cada app é configurado como um serviço no `compose.yml` com:
 
 ## 🌐 Rede
 
-O projeto usa uma rede Docker externa chamada `aiqdocker-net` para comunicação entre os serviços.
+O projeto usa uma rede Docker externa chamada `aesiron-net` para comunicação entre os serviços.
 
 ## ⚠️ Notas Importantes
 

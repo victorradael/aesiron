@@ -87,18 +87,17 @@ make rerun
 ```
 .
 ├── apps/                    # Diretório principal dos apps
-│   ├── template/           # Template para novos apps
 │   └── [outros-apps]/     # Apps individuais
+├── template/               # Template para novos apps
 ├── compose.yml             # Configuração do Docker Compose
-├── Makefile               # Comandos make para gestão do projeto
-└── requirements.txt       # Dependências Python globais
+└── Makefile               # Comandos make para gestão do projeto
 ```
 
 ## 🔧 Desenvolvimento
 
 ### Template de App
 
-O template em `apps/template` é usado como base para novos apps. Ao criar um novo app, o conteúdo deste template é copiado e personalizado com:
+O template em `template` é usado como base para novos apps. Ao criar um novo app, o conteúdo deste template é copiado e personalizado com:
 - Nome do app
 - Porta configurada
 - Configurações específicas

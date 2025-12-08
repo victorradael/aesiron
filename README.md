@@ -1,3 +1,8 @@
+
+<p align="center">
+  <img src="./assets/aesiron.png" width="450" alt="Aesiron" />
+</p>
+
 # Aesiron
 
 ## 📋 Requisitos

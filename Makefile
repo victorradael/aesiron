@@ -7,8 +7,12 @@ ARMORY_DIR := ../aesiron-armory
 APPS := $(shell find $(ARMORY_DIR) -maxdepth 2 -name Makefile -exec dirname {} \; | xargs -n1 basename 2>/dev/null)
 
 # Targets principais
-.PHONY: help setup-dev run dev down logs app remove urls clean rerun banner
+.PHONY: help setup-dev run dev down logs app remove urls clean rerun banner _ensure_armory
 .DEFAULT_GOAL := help
+
+# Garante que a pasta da Armaria existe antes de qualquer operação
+_ensure_armory:
+	@mkdir -p $(ARMORY_DIR)
 
 ##@ Ajuda
 
@@ -26,21 +30,27 @@ help: banner  ## Mostra esta mensagem de ajuda
 
 
 PYTHON := python3
-VENV_DIR := .venv
-PIP := $(VENV_DIR)/bin/pip
+VENV_PATH := $(ARMORY_DIR)/.venv
+PIP := $(VENV_PATH)/bin/pip
 
 ##@ Ambiente de Desenvolvimento (Host)
 
-setup-dev:  ## Configura o ambiente virtual Python (.venv) e instala dependências
-	@echo "Removing previous virtual environment (if any)..."
-	rm -rf $(VENV_DIR)
-	@echo "Creating new virtual environment..."
-	$(PYTHON) -m venv $(VENV_DIR)
-	@echo "Installing dependencies..."
-	. $(VENV_DIR)/bin/activate && \
-		$(PIP) install --upgrade pip setuptools && \
-		[ -f requirements.txt ] && $(PIP) install -r requirements.txt || echo "No requirements.txt found"
-	@echo "Setup complete."
+setup-dev: _ensure_armory  ## Configura o ambiente virtual (.venv) na Armaria e instala dependências de TODOS os apps
+	@echo "Removendo ambiente virtual anterior na Armaria (se houver)..."
+	@rm -rf $(VENV_PATH)
+	@echo "Criando novo ambiente virtual em $(VENV_PATH)..."
+	@$(PYTHON) -m venv $(VENV_PATH)
+	@echo "Atualizando pip e setuptools..."
+	@. $(VENV_PATH)/bin/activate && \
+		$(PIP) install --upgrade pip setuptools >/dev/null
+	@for app in $(APPS); do \
+		if [ -f "$(ARMORY_DIR)/$$app/requirements.txt" ]; then \
+			echo "Instalando dependências de: $$app..."; \
+			. $(VENV_PATH)/bin/activate && \
+			$(PIP) install -r $(ARMORY_DIR)/$$app/requirements.txt >/dev/null || echo "Falha ao instalar dependências de $$app"; \
+		fi \
+	done
+	@echo "Ambiente configurado com sucesso! Utilize o .venv da pasta $(ARMORY_DIR) no seu editor."
 
 ##@ Gerenciamento de Execução
 
@@ -52,7 +62,7 @@ dev: banner ## Inicia os apps em modo interativo (Uso: make dev [nome])
 down: ## Para os apps (Uso: make down [nome])
 logs: ## Exibe logs dos apps (Uso: make logs [nome])
 
-run dev down logs:
+run dev down logs: _ensure_armory
 	@docker network create $(NETWORK_NAME) || true
 	@if [ -n "$(APP_TARGET)" ]; then \
 		if [ -d "$(ARMORY_DIR)/$(APP_TARGET)" ]; then \
@@ -120,7 +130,7 @@ remove:  ## Remove completamente um app existente da armory (Uso: make remove <n
 	@echo "App $(APP_NAME) removed successfully!"
 
 # Criar novo app descentralizado
-app:  ## Cria um app Streamlit independente na armory (Uso: make app <nome> <porta>)
+app: _ensure_armory  ## Cria um app Streamlit independente na armory (Uso: make app <nome> <porta>)
 	@if [ -z "$(word 2,$(MAKECMDGOALS))" ]; then \
 		echo "Error: App name is required. Usage: make app nome_do_app 8502"; \
 		exit 1; \

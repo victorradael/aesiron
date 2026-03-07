@@ -1,2 +1,3 @@
 [console_scripts]
 aesiron = aesiron.cli:app
+iron = aesiron.cli:app

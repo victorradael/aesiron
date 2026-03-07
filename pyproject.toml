@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 aesiron = "aesiron.cli:app"
+iron = "aesiron.cli:app"
 
 [tool.setuptools.package-data]
 "aesiron" = ["template/**/*", "template/**/.*"]

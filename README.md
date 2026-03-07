@@ -23,16 +23,16 @@ Instale diretamente do GitHub no seu ambiente Python:
 ```bash
 pip install git+https://github.com/victorradael/aesiron.git
 ```
-Agora o comando `aesiron` estará disponível globalmente (ou no seu venv).
+Agora o comando `aesiron` (ou seu alias mais curto, `iron`) estará disponível globalmente (ou no seu venv).
 
 ### B. Via Docker (Sem Python local)
 Se você tem Docker, pode usar a CLI sem instalar nada no seu host:
 ```bash
-# Crie um alias para facilitar o uso
-alias aesiron='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/work -w /work victorradael/aesiron'
+# Crie um alias para facilitar o uso (você pode escolher aesiron ou iron)
+alias iron='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/work -w /work victorradael/aesiron'
 
 # Forjando um app
-aesiron forge meu-app --port 8501
+iron forge meu-app --port 8501
 ```
 
 ---
@@ -58,15 +58,17 @@ O Aesiron gerencia um **Arsenal (Armory)**: uma pasta onde seus apps independent
 
 ## 🎯 Comandos da CLI
 
+*Dica: Você pode usar `aesiron <comando>` ou simplesmente `iron <comando>`.*
+
 | Comando | Descrição |
 |---|---|
-| `aesiron help` | Mostra os comandos disponíveis |
-| `aesiron forge <nome>` | Cria um novo app independente |
-| `aesiron run [nome]` | Inicia um ou todos os apps |
-| `aesiron stop [nome]` | Para os containers |
-| `aesiron list` | Status dos apps no Arsenal |
-| `aesiron urls` | Painel de links de acesso |
-| `aesiron destroy <nome>` | Remove permanentemente um app |
+| `iron help` | Mostra os comandos disponíveis |
+| `iron forge <nome>` | Cria um novo app independente |
+| `iron run [nome]` | Inicia um ou todos os apps |
+| `iron stop [nome]` | Para os containers |
+| `iron list` | Status dos apps no Arsenal |
+| `iron urls` | Painel de links de acesso |
+| `iron destroy <nome>` | Remove permanentemente um app |
 
 ---
 

@@ -1,8 +1,0 @@
-networks:
-  aesiron-net:
-    external: true
-
-services:
-  # O Aesiron agora gerencia apps de forma descentralizada.
-  # Cada app em ../aesiron-armory possui seu próprio compose.yml.
-  # Use 'make run' na raiz para subir todos ou 'make run <nome>' para um específico.

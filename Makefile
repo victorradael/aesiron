@@ -87,8 +87,8 @@ urls:  ## Mostra as URLs para acessar os apps por dispositivos na mesma rede (Wi
 		echo "Nenhuma aplicação está rodando no momento."; \
 	fi
 
-clean:  ## Remove imagens Docker locais de aplicações para liberar espaço
-	docker images -a | grep 'app-aesiron-' | awk '{print $$3}' | xargs -r docker rmi -f
+clean:  ## Remove imagens Docker locais de aplicações para liberar espaço (Uso: make clean)
+	@docker images --filter=reference='app-aesiron-*' -q | xargs -r docker rmi -f
 
 rerun: down run  ## Reinicia o ambiente, derrubando tudo e subindo novamente
 

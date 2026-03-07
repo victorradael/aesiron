@@ -26,10 +26,11 @@ pip install git+https://github.com/victorradael/aesiron.git
 Agora o comando `aesiron` (ou seu alias mais curto, `iron`) estará disponível globalmente (ou no seu venv).
 
 ### B. Via Docker (Sem Python local)
-Se você tem Docker, pode usar a CLI sem instalar nada no seu host:
+Se você tem Docker, pode usar a CLI sem instalar nada no seu host. 
+*(Recomendamos usar uma tag de versão específica, ex: `:0.1.0`, para maior estabilidade)*:
 ```bash
 # Crie um alias para facilitar o uso (você pode escolher aesiron ou iron)
-alias iron='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/work -w /work victorradael/aesiron'
+alias iron='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/work -w /work victorradael/aesiron:latest'
 
 # Forjando um app
 iron forge meu-app --port 8501

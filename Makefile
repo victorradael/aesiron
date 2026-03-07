@@ -30,3 +30,14 @@ lint: ## Roda verificações de código
 clean-all: ## Limpa tudo (venv, cache, builds)
 	rm -rf $(VENV) dist/ build/ *.egg-info .ruff_cache
 	@docker images --filter=reference='app-aesiron-*' -q | xargs -r docker rmi -f
+
+release: ## Automação de nova versão (Uso: make release v=0.2.0)
+	@if [ -z "$(v)" ]; then echo "Erro: Informe a versão (ex: make release v=1.0.0)"; exit 1; fi
+	@echo "Lançando versão $(v)..."
+	@sed -i 's/^version = .*/version = "$(v)"/' pyproject.toml
+	@git add pyproject.toml
+	@git commit -m "chore: bump version to $(v)"
+	@git tag -a v$(v) -m "Release v$(v)"
+	@git push origin main
+	@git push origin v$(v)
+	@echo "Versão v$(v) lançada e enviada para o GitHub!"

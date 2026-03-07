@@ -4,17 +4,25 @@ import uuid
 import re
 from typing import List, Dict, Any
 
+from core.logger import get_logger
+
+logger = get_logger(__name__)
+
 DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "equipment_sets.json")
 
 
 def load_equipment_sets() -> List[Dict[str, Any]]:
     """Loads equipment sets from the JSON file."""
     if not os.path.exists(DATA_FILE):
+        logger.warning(f"Data file not found at {DATA_FILE}. Returning empty list.")
         return []
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
+            data = json.load(f)
+            logger.debug(f"Loaded {len(data)} equipment sets.")
+            return data
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        logger.error(f"Error loading equipment sets: {e}")
         return []
 
 
@@ -23,6 +31,7 @@ def save_equipment_sets(sets: List[Dict[str, Any]]) -> None:
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(sets, f, ensure_ascii=False, indent=4)
+    logger.info(f"Successfully saved {len(sets)} equipment sets.")
 
 
 def _get_unique_name(
@@ -77,6 +86,7 @@ def add_equipment_set(
 
     sets.append(new_set)
     save_equipment_sets(sets)
+    logger.info(f"Added new equipment set: '{unique_name}' (ID: {new_set['id']})")
 
 
 def update_equipment_set(
@@ -102,6 +112,7 @@ def update_equipment_set(
 
                 s["equipment"][item]["has_in_set"] = has_in_set
                 s["equipment"][item]["custom_name"] = custom_names.get(item, "")
+            logger.info(f"Updated equipment set '{set_id}' to name '{s['name']}'")
             break
 
     save_equipment_sets(sets)
@@ -115,7 +126,9 @@ def delete_equipment_set(set_id: str) -> bool:
 
     if len(sets) < initial_length:
         save_equipment_sets(sets)
+        logger.info(f"Deleted equipment set: {set_id}")
         return True
+    logger.warning(f"Attempted to delete non-existent set: {set_id}")
     return False
 
 
@@ -138,6 +151,9 @@ def clone_equipment_set(set_id: str) -> bool:
 
     sets.append(cloned_set)
     save_equipment_sets(sets)
+    logger.info(
+        f"Cloned equipment set id '{set_id}' to new set '{cloned_set['name']}' (ID: {cloned_set['id']})"
+    )
     return True
 
 
@@ -150,5 +166,8 @@ def update_equipment_acquisition(
         if s["id"] == set_id:
             if equipment_key in s["equipment"]:
                 s["equipment"][equipment_key]["acquired"] = acquired_status
+                logger.info(
+                    f"Set '{s['name']}' (ID: {set_id}): item '{equipment_key}' acquired status updated to {acquired_status}"
+                )
                 break
     save_equipment_sets(sets)

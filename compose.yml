@@ -3,15 +3,16 @@ networks:
     external: true
 
 services:
-  example:
-    build: ./apps/example
-    image: app-aiqtudo-example
-    container_name: app-aiqtudo-example
+
+  build_keeper:
+    build: ./apps/build_keeper
+    image: app-aesiron-build_keeper
+    container_name: app-aesiron-build_keeper
     volumes:
-      - ./apps/example/app:/app
+      - ./apps/build_keeper/app:/app
     ports:
-      - "8501:8501"
+      - "8503:8503"
     env_file:
-      - ./apps/example/.env
+      - ./apps/build_keeper/.env
     networks:
       - aesiron-net

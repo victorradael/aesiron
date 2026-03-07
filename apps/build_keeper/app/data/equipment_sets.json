@@ -1,0 +1,48 @@
+[
+    {
+        "id": "3829315b-d8ed-4dce-8a50-031de6543e3f",
+        "name": "Comi o cu da curiosa!",
+        "equipment": {
+            "capacete": {
+                "has_in_set": true,
+                "acquired": true,
+                "custom_name": "Cabeça do Meu KRAIO!"
+            },
+            "peitoral": {
+                "has_in_set": false,
+                "acquired": false,
+                "custom_name": ""
+            },
+            "calças": {
+                "has_in_set": false,
+                "acquired": false,
+                "custom_name": ""
+            },
+            "anel_1": {
+                "has_in_set": false,
+                "acquired": false,
+                "custom_name": ""
+            },
+            "anel_2": {
+                "has_in_set": false,
+                "acquired": false,
+                "custom_name": ""
+            },
+            "colar": {
+                "has_in_set": false,
+                "acquired": false,
+                "custom_name": ""
+            },
+            "mochila": {
+                "has_in_set": false,
+                "acquired": false,
+                "custom_name": ""
+            },
+            "mao_secundaria": {
+                "has_in_set": false,
+                "acquired": false,
+                "custom_name": ""
+            }
+        }
+    }
+]

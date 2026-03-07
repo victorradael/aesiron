@@ -3,14 +3,14 @@ COMPOSE := docker compose
 NETWORK_NAME := aesiron-net
 
 # Targets principais
-.PHONY: setup-dev run dev down logs app remove-app
+.PHONY: setup-dev run dev down logs app remove-app urls
 
 # Função para criar novo app
 define COMPOSE_SERVICE_TEMPLATE
 \n  {{APP_NAME}}:
     build: ./apps/{{APP_NAME}}
-    image: app-aiqtudo-{{APP_NAME}}
-    container_name: app-aiqtudo-{{APP_NAME}}
+    image: app-aesiron-{{APP_NAME}}
+    container_name: app-aesiron-{{APP_NAME}}
     volumes:
       - ./apps/{{APP_NAME}}/app:/app
     ports:
@@ -54,8 +54,17 @@ down:
 logs:
 	$(COMPOSE) $(ALL_FILES) logs -f
 
+urls:
+	@IP=$$(hostname -I | awk '{print $$1}'); \
+	if docker ps --format '{{.Names}}' | grep -q app-aesiron; then \
+		echo "Aplicações rodando na rede interna:"; \
+		docker ps --format '{{.Names}}|{{.Ports}}' | grep app-aesiron | awk -F'|' '{print $$1" "$$2}' | sed -E "s/app-aesiron-([^ ]+) .*0\.0\.0\.0:([0-9]+)->.*/- \1: http:\/\/$$IP:\2/"; \
+	else \
+		echo "Nenhuma aplicação está rodando no momento."; \
+	fi
+
 clean:
-	docker images -a | grep 'app-aiqtudo-' | awk '{print $$3}' | xargs -r docker rmi -f
+	docker images -a | grep 'app-aesiron-' | awk '{print $$3}' | xargs -r docker rmi -f
 
 rerun: down run
 

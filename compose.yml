@@ -5,14 +5,15 @@ networks:
 services:
 
   build_keeper:
-    build: ./apps/build_keeper
+    build: ./../aesiron-armory/build_keeper
     image: app-aesiron-build_keeper
     container_name: app-aesiron-build_keeper
     volumes:
-      - ./apps/build_keeper/app:/app
+      - ./../aesiron-armory/build_keeper/app:/app
     ports:
       - "8503:8503"
     env_file:
-      - ./apps/build_keeper/.env
+      - ./../aesiron-armory/build_keeper/.env
     networks:
       - aesiron-net
+

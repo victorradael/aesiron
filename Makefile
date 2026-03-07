@@ -23,15 +23,15 @@ help: banner  ## Mostra esta mensagem de ajuda
 # Função para criar novo app
 define COMPOSE_SERVICE_TEMPLATE
 \n  {{APP_NAME}}:
-    build: ./apps/{{APP_NAME}}
+    build: ../aesiron-armory/{{APP_NAME}}
     image: app-aesiron-{{APP_NAME}}
     container_name: app-aesiron-{{APP_NAME}}
     volumes:
-      - ./apps/{{APP_NAME}}/app:/app
+      - ../aesiron-armory/{{APP_NAME}}/app:/app
     ports:
       - "{{PORT}}:{{PORT}}"
     env_file:
-      - ./apps/{{APP_NAME}}/.env
+      - ../aesiron-armory/{{APP_NAME}}/.env
     networks:
       - aesiron-net
 endef
@@ -57,23 +57,26 @@ setup-dev:  ## Configura o ambiente virtual Python (.venv) e instala dependênci
 
 ##@ Execução e Deploy
 
-run: banner  ## Inicia os contêineres em background (detached mode)
+# Capturar possível argumento de nome do app para run, dev, down e logs
+APP_TARGET := $(word 2,$(MAKECMDGOALS))
+APP_SERVICE := $(APP_TARGET)
+
+run: banner  ## Inicia os contêineres em background (Uso: make run [nome-do-app])
 	docker network create $(NETWORK_NAME) || true
-	$(COMPOSE) up -d
+	$(COMPOSE) up -d $(APP_SERVICE)
 
-dev: banner  ## Inicia os contêineres conectando os terminais (modo interativo)
+dev: banner  ## Inicia os contêineres conectando os terminais em modo interativo (Uso: make dev [nome-do-app])
 	docker network create $(NETWORK_NAME) || true
-	$(COMPOSE) $(ALL_FILES) up 
+	$(COMPOSE) $(ALL_FILES) up $(APP_SERVICE)
 
-
-down:  ## Para e remove todos os contêineres e a rede criada
-	$(COMPOSE) $(ALL_FILES) down
-	docker network rm $(NETWORK_NAME) || true
+down:  ## Para e remove contêineres e a rede criada (Uso: make down [nome-do-app])
+	$(COMPOSE) $(ALL_FILES) down $(APP_SERVICE)
+	$(if $(APP_TARGET),,docker network rm $(NETWORK_NAME) || true)
 
 ##@ Manutenção e Observabilidade
 
-logs:  ## Exibe os logs contínuos de todos os contêineres rodando
-	$(COMPOSE) $(ALL_FILES) logs -f
+logs:  ## Exibe os logs contínuos dos contêineres rodando (Uso: make logs [nome-do-app])
+	$(COMPOSE) $(ALL_FILES) logs -f $(APP_SERVICE)
 
 urls:  ## Mostra as URLs para acessar os apps por dispositivos na mesma rede (Wi-Fi/Local)
 	@IP=$$(hostname -I | awk '{print $$1}'); \
@@ -92,19 +95,21 @@ rerun: down run  ## Reinicia o ambiente, derrubando tudo e subindo novamente
 ##@ Gerenciamento de Projetos e Apps
 
 # Remove um app existente
-remove:  ## Remove completamente um app existente e suas entradas no compose (Uso: make remove <nome>)
+remove:  ## Remove completamente um app existente da armory e suas entradas no compose (Uso: make remove <nome>)
 	@if [ -z "$(word 2,$(MAKECMDGOALS))" ]; then \
 		echo "Error: App name is required. Usage: make remove-app nome-do-app"; \
 		exit 1; \
 	fi
 	$(eval APP_NAME := $(word 2,$(MAKECMDGOALS)))
 	@echo "Removing app: $(APP_NAME)"
-	@if [ ! -d "apps/$(APP_NAME)" ]; then \
-		echo "Error: App directory apps/$(APP_NAME) does not exist"; \
+	@if [ ! -d "../aesiron-armory/$(APP_NAME)" ]; then \
+		echo "Error: App directory ../aesiron-armory/$(APP_NAME) does not exist"; \
 		exit 1; \
 	fi
+	@echo "Cleaning up root-owned cache files using docker..."
+	@docker run --rm -v $(PWD)/../aesiron-armory/$(APP_NAME):/app alpine sh -c "rm -rf /app/* /app/.* 2>/dev/null" || true
 	@echo "Removing app directory..."
-	@rm -rf apps/$(APP_NAME)
+	@rm -rf ../aesiron-armory/$(APP_NAME)
 	@echo "Removing service from compose.yml..."
 	@sed -i '/^[[:space:]]*$(APP_NAME):/,/[[:space:]]*- aesiron-net/d' compose.yml
 	@sed -i '/^$$/N;/^\n$$/D' compose.yml  # Remove linhas em branco duplicadas
@@ -127,13 +132,14 @@ app:  ## Cria um app Streamlit a partir do template (Uso: make app <nome>)
 	fi
 	$(eval APP_NAME := $(word 2,$(MAKECMDGOALS)))
 	$(eval PORT := $(word 3,$(MAKECMDGOALS)))
-	@echo "Creating new app: $(APP_NAME) with port: $(PORT)"
-	@mkdir -p apps/$(APP_NAME)
-	@cp -r template/. apps/$(APP_NAME)/
-	@find apps/$(APP_NAME) -type f -exec sed -i 's/{{APP_NAME}}/$(APP_NAME)/g' {} +
-	@find apps/$(APP_NAME) -type f -exec sed -i 's/{{PORT}}/$(PORT)/g' {} +
+	@echo "Creating new app: $(APP_NAME) with port: $(PORT) in aesiron-armory"
+	@mkdir -p ../aesiron-armory/$(APP_NAME)
+	@cp -r template/. ../aesiron-armory/$(APP_NAME)/
+	@cp ../aesiron-armory/$(APP_NAME)/.env.example ../aesiron-armory/$(APP_NAME)/.env
+	@find ../aesiron-armory/$(APP_NAME) -type f -exec sed -i 's/{{APP_NAME}}/$(APP_NAME)/g' {} +
+	@find ../aesiron-armory/$(APP_NAME) -type f -exec sed -i 's/{{PORT}}/$(PORT)/g' {} +
 	@echo "$$COMPOSE_SERVICE_TEMPLATE" | sed 's/{{APP_NAME}}/$(APP_NAME)/g' | sed 's/{{PORT}}/$(PORT)/g' >> compose.yml
-	@echo "App $(APP_NAME) created successfully!"
+	@echo "App $(APP_NAME) created successfully in ../aesiron-armory!"
 	@echo "Don't forget to:"
-	@echo "1. Configure .env file in apps/$(APP_NAME)/.env"
+	@echo "1. Configure .env file in ../aesiron-armory/$(APP_NAME)/.env"
 	@echo "2. Review the new service in compose.yml"

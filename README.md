@@ -45,7 +45,7 @@ Crie um novo app a partir do template padrão informando o **nome do app** e a *
 make app meu-app 8501
 ```
 
-Isso criará a estrutura do app em `apps/meu-app` e o adicionará automaticamente ao arquivo `compose.yml`.
+Isso forjará a estrutura do app no repositório irmão em `../aesiron-armory/meu-app` e o adicionará automaticamente ao arquivo `compose.yml` da ferramenta.
 > **Aviso:** Lembre-se de configurar o arquivo `.env` gerado dentro da pasta do seu novo app, caso necessite de chaves secretas ou configuração de banco de dados.
 
 ### 3. Subindo os Serviços
@@ -54,6 +54,12 @@ Inicie todos os seus apps em background com o comando:
 
 ```bash
 make run
+```
+
+Se quiser iniciar apenas o novo app que você acabou de criar (e deixar os demais parados), basta informar o nome dele:
+
+```bash
+make run meu-app
 ```
 
 Pronto! Seu app estará rodando e disponível na porta que você configurou.
@@ -72,11 +78,11 @@ Isso exibirá todos os atalhos diretamente no seu terminal, incluindo os mais co
 
 | Comando | Descrição |
 |---|---|
-| `make app <nome> <porta>` | Cria um novo app Streamlit (Ex: `make app painel 8502`) |
-| `make remove <nome>` | Remove completamente um app existente (diretório e compose) |
-| `make run` / `make dev` | Inicia os serviços (em background ou modo interativo) |
-| `make down` | Para e remove todos os contêineres e a rede do projeto |
-| `make logs` | Exibe os logs contínuos de todos os apps em execução |
+| `make app <nome> <porta>` | Cria um novo app Streamlit na armory (Ex: `make app painel 8502`) |
+| `make remove <nome>` | Remove completamente um app existente da armory e do compose local |
+| `make run [nome]` / `make dev [nome]` | Inicia os serviços (todos ou usando um nome em modo bg/interativo) |
+| `make down [nome]` | Para e remove todos os contêineres e a rede (ou apenas de um app) |
+| `make logs [nome]` | Exibe os logs contínuos de todos os apps (ou de um específico) em execução |
 | `make urls` | Mostra as URLs locais para explorar e acessar os apps na sua rede (Wi-Fi) |
 | `make clean` | Limpa imagens Docker descartáveis para poupar espaço no HD |
 
@@ -84,17 +90,19 @@ Isso exibirá todos os atalhos diretamente no seu terminal, incluindo os mais co
 
 ## 📁 Estrutura do Projeto
 
-A organização do repositório foi pensada para escalar:
+A organização do repositório foi pensada em formato de "Ferreiro e Armaria". A ferramenta mora num repositório e seus projetos moram em outro, paralelos entre si:
 
 ```text
-aesiron/
-├── apps/               # Diretório onde ficam seus aplicativos
-│   ├── meu-app-1/      # App independente com seu próprio código e .env
-│   └── meu-app-2/      # Outro app...
-├── template/           # Template base utilizado pelo comando "make app"
-├── assets/             # Recursos visuais (logo)
-├── compose.yml         # Arquivo mestre de orquestração do Docker
-└── Makefile            # Central de comandos e gerenciamento
+projetos/
+├── aesiron/                # A "Forja": O gerador e orquestrador via Docker centralizado
+│   ├── template/           # Template base utilizado pelo comando "make app"
+│   ├── assets/             # Recursos visuais (logo)
+│   ├── compose.yml         # Arquivo mestre de orquestração do Docker
+│   └── Makefile            # Central de comandos e gerenciamento
+│
+└── aesiron-armory/         # O "Arsenal": A sua coleção de apps gerados independentes
+    ├── meu-app-1/          # App independente com seu próprio código e .env
+    └── meu-app-2/          # Outro app...
 ```
 
 ---

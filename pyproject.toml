@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aesiron"
+version = "0.1.0"
+description = "A CLI tool to forge and manage multiple Streamlit apps with Docker."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "typer[all]",
+    "rich",
+    "docker",
+    "jinja2",
+]
+
+[project.scripts]
+aesiron = "aesiron.cli:app"
+
+[tool.setuptools.package-data]
+"aesiron" = ["template/**/*", "template/**/.*"]

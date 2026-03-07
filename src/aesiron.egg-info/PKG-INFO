@@ -1,3 +1,14 @@
+Metadata-Version: 2.4
+Name: aesiron
+Version: 0.1.0
+Summary: A CLI tool to forge and manage multiple Streamlit apps with Docker.
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: typer[all]
+Requires-Dist: rich
+Requires-Dist: docker
+Requires-Dist: jinja2
+
 <p align="center">
   <img src="./assets/aesiron.png" width="250" alt="Aesiron Logo" />
 </p>

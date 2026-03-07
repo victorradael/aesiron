@@ -5,136 +5,88 @@
 <h1 align="center">Aesiron</h1>
 
 <p align="center">
-  <strong>Gerenciador de Múltiplos Apps Streamlit com Docker & Make</strong>
+  <strong>O Ferreiro de Apps Streamlit Standalone</strong>
 </p>
 
 <p align="center">
-  Crie, gerencie e faça o deploy de múltiplos apps Streamlit de forma rápida, isolada e organizada.
+  Forgue, gerencie e orquestre múltiplos aplicativos Streamlit em containers Docker com uma única ferramenta.
 </p>
 
 ---
 
-## 🛠️ Requisitos
+## ⚡ Plug-and-Play (Instalação Rápida)
 
-Certifique-se de ter as seguintes ferramentas instaladas em sua máquina:
+Você **não precisa** clonar este repositório para usar o Aesiron. Escolha uma das formas abaixo:
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-- [Make](https://www.gnu.org/software/make/)
-- Python 3.x
-
----
-
-## 🚀 Como Começar
-
-O Aesiron foi transformado em uma CLI poderosa para facilitar a forja e orquestração de seus apps.
-
-### 1. Instalação (Para Usuários)
-
-Você pode configurar a CLI localmente usando o ambiente virtual isolado:
-
+### A. Via Python (Pip)
+Instale diretamente do GitHub no seu ambiente Python:
 ```bash
-make setup-cli
+pip install git+https://github.com/victorradael/aesiron.git
 ```
-Isso criará a pasta `.venv`, instalará as dependências e configurará o script executável `./aesiron-cli.sh`.
+Agora o comando `aesiron` estará disponível globalmente (ou no seu venv).
 
----
-
-### 2. Uso da CLI
-
-Você pode interagir com o Aesiron de três formas:
-
-#### A. Via Wrapper (Recomendado)
-Use o script que já resolve o ambiente virtual para você:
+### B. Via Docker (Sem Python local)
+Se você tem Docker, pode usar a CLI sem instalar nada no seu host:
 ```bash
-./aesiron-cli.sh <comando>
-```
+# Crie um alias para facilitar o uso
+alias aesiron='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/work -w /work victorradael/aesiron'
 
-#### B. Via Makefile (Atalhos)
-```bash
-make forge name=meu-app port=8501
-make run
-make urls
-```
-
-#### C. Ativando o Ambiente (Bash/Zsh)
-```bash
-source .venv/bin/activate
-aesiron --help
+# Forjando um app
+aesiron forge meu-app --port 8501
 ```
 
 ---
 
-### 3. Comandos Disponíveis
+## 🚀 Como Funciona
 
-| Comando | Descrição | Makefile Equivalente |
-|---|---|---|
-| `aesiron forge <nome> --port <porta>` | Forja um novo app na Armaria | `make forge name=<n> port=<p>` |
-| `aesiron run [nome]` | Inicia apps (um ou todos) | `make run [name=<n>]` |
-| `aesiron stop [nome]` | Para os apps | `make stop [name=<n>]` |
-| `aesiron list` | Lista apps e seus status | `make list` |
-| `aesiron urls` | Mostra as URLs de acesso | `make urls` |
-| `aesiron destroy <nome>` | Remove um app permanentemente | `make destroy name=<n>` |
+O Aesiron gerencia um **Arsenal (Armory)**: uma pasta onde seus apps independentes são criados.
 
----
-
-### 🛠️ Desenvolvimento Local (Para Contribuidores)
-
-Se você estiver desenvolvendo a CLI e quiser testar mudanças em tempo real:
-
-1.  **Instalação Editável**:
+1.  **Forjando um App**:
     ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -e .
+    aesiron forge meu-dashboard --port 8501
     ```
-    O parâmetro `-e` (editable) garante que qualquer alteração nos arquivos em `src/aesiron/` seja refletida imediatamente no comando `aesiron`.
+    Isso cria a pasta `aesiron-armory/meu-dashboard` com tudo que o app precisa (Dockerfile, Compose, Makefile local).
 
-2.  **Testando a Forja**:
+2.  **Orquestração Massiva**:
     ```bash
-    aesiron forge test-dev --port 9000
+    aesiron run          # Sobe TODOS os apps encontrados no Arsenal
+    aesiron list         # Mostra quais apps estão rodando
+    aesiron urls         # Exibe as URLs de acesso de todos os apps
     ```
 
 ---
 
-### 🐳 Uso via Docker (Container)
+## 🎯 Comandos da CLI
 
-Você também pode utilizar a CLI dentro de um container:
-
-1.  **Construir a imagem**:
-    ```bash
-    docker build -t aesiron .
-    ```
-
-2.  **Executar comandos**:
-    ```bash
-    docker run --rm \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      -v $(pwd)/../aesiron-armory:/armory \
-      aesiron list
-    ```
+| Comando | Descrição |
+|---|---|
+| `aesiron help` | Mostra os comandos disponíveis |
+| `aesiron forge <nome>` | Cria um novo app independente |
+| `aesiron run [nome]` | Inicia um ou todos os apps |
+| `aesiron stop [nome]` | Para os containers |
+| `aesiron list` | Status dos apps no Arsenal |
+| `aesiron urls` | Painel de links de acesso |
+| `aesiron destroy <nome>` | Remove permanentemente um app |
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Estrutura do Ecossistema
 
-```text
-projetos/
-├── aesiron/                # O "Ferreiro" (CLI)
-│   ├── src/aesiron/        # Código fonte da CLI
-│   │   ├── template/       # Moldes (Templates) dos apps
-│   │   ├── cli.py          # Interface Typer (Comandos)
-│   │   └── core.py         # Lógica de orquestração (Docker/FS)
-│   ├── aesiron-cli.sh      # Wrapper para Shell
-│   ├── pyproject.toml      # Definição do pacote Python
-│   └── Makefile            # Atalhos de conveniência
-│
-└── aesiron-armory/         # O "Arsenal" (Apps Independentes)
-```
+- **Ferreiro (CLI)**: A ferramenta que você instala para gerar e comandar.
+- **Arsenal (Armory)**: Sua pasta de trabalho onde os apps gerados residem.
+- **Apps Forjados**: Cada app é autossuficiente (Docker + Makefile local).
+
+---
+
+## 🛠️ Desenvolvimento (Para Contribuidores)
+
+Se você quer modificar a CLI do Aesiron:
+
+1.  Clone o repositório: `git clone ...`
+2.  Configure o ambiente de dev: `make setup-dev`
+3.  Teste suas mudanças: `source .venv/bin/activate && aesiron help`
 
 ---
 
 ## 🕸️ Rede & Comunicação
-
-O Aesiron cria e gerencia automaticamente uma rede Docker externa chamada `aesiron-net`. 
-Se você possuir outros serviços em Docker num arquivo diferente ou quiser que seus apps Streamlit comuniquem entre si (ou com APIs / Bancos de Dados locais), basta referenciá-los através desta rede compartilhada.
+Todos os apps compartilham a rede `aesiron-net`, permitindo comunicação direta entre eles e outros serviços Docker.

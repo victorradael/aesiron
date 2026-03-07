@@ -1,46 +1,32 @@
-# Variáveis
-CLI := ./aesiron-cli.sh
+# Variáveis de Desenvolvimento
+VENV := .venv
+PYTHON := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
 
-.PHONY: help setup-cli forge run stop list urls destroy clean banner
+.PHONY: help setup-dev install-dev build lint clean-all
 
 .DEFAULT_GOAL := help
 
-banner:
-	@$(CLI) --help | head -n 1 || true
-	@printf "\033[1;36m"
-	@printf "    _    _____ ____ ___ ____   ___  _   _ \n"
-	@printf "   / \  | ____/ ___|_ _|  _ \ / _ \| \ | |\n"
-	@printf "  / _ \ |  _| \___ \| || |_) | | | |  \| |\n"
-	@printf " / ___ \| |___ ___) | ||  _ <| |_| | |\  |\n"
-	@printf "/_/   \_\_____|____/___|_| \_\ ___/|_| \_|\n"
-	@printf "\033[0m\n"
-
-help: banner ## Mostra esta mensagem de ajuda
+help: ## Mostra esta ajuda (Comandos para DEVELOPERS)
+	@printf "\033[1;31m⚠ COMANDOS PARA DESENVOLVEDORES DA CLI ⚠\033[0m\n"
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUso:\n  make \033[36m<alvo>\033[0m\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } ' $(MAKEFILE_LIST)
 
-setup-cli: ## Configura o ambiente da CLI localmente
-	@python3 -m venv .venv
-	@. .venv/bin/activate && pip install -e .
-	@chmod +x aesiron-cli.sh
-	@echo "CLI configurada com sucesso! Use './aesiron-cli.sh' ou os comandos do Makefile."
+setup-dev: ## Prepara o ambiente virtual para desenvolvimento
+	@python3 -m venv $(VENV)
+	@$(PIP) install --upgrade pip setuptools
+	@$(PIP) install -e .
+	@echo "Ambiente de dev configurado. Ative com: source $(VENV)/bin/activate"
 
-forge: ## Forja um novo app (Uso: make forge name=meu-app port=8501)
-	@$(CLI) forge $(name) --port $(port)
+install-dev: setup-dev ## Instala dependências de desenvolvimento
 
-run: ## Inicia apps (Uso: make run [name=meu-app])
-	@$(CLI) run $(name)
+build: ## Versão de build (exemplo)
+	@$(PYTHON) -m pip install build
+	@$(PYTHON) -m build
 
-stop: ## Para apps (Uso: make stop [name=meu-app])
-	@$(CLI) stop $(name)
+lint: ## Roda verificações de código
+	@$(PIP) install ruff
+	@$(VENV)/bin/ruff check .
 
-list: ## Lista apps no arsenal
-	@$(CLI) list
-
-urls: ## Mostra as URLs de acesso
-	@$(CLI) urls
-
-destroy: ## Remove um app (Uso: make destroy name=meu-app)
-	@$(CLI) destroy $(name)
-
-clean: ## Limpa imagens docker
+clean-all: ## Limpa tudo (venv, cache, builds)
+	rm -rf $(VENV) dist/ build/ *.egg-info .ruff_cache
 	@docker images --filter=reference='app-aesiron-*' -q | xargs -r docker rmi -f

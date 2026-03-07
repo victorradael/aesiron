@@ -4,27 +4,61 @@ from rich.console import Console
 from rich.table import Table
 from . import core
 
-app = typer.Typer(help="Aesiron: Forje e gerencie múltiplos apps Streamlit com Docker.")
+app = typer.Typer(
+    help="Aesiron: Forje e gerencie múltiplos apps Streamlit com Docker.",
+    rich_markup_mode="rich",
+)
 console = Console()
 
 
 @app.command()
-def init():
-    """Inicializa o ambiente Aesiron (Arsenal)."""
-    path = core.get_armory_dir()
+def help(ctx: typer.Context):
+    """Mostra esta mensagem de ajuda."""
+    banner()
+    console.print(ctx.parent.get_help())
+
+
+def banner():
+    console.print("[bold cyan]    _    _____ ____ ___ ____   ___  _   _ [/bold cyan]")
     console.print(
-        f"[bold green]✓[/bold green] Arsenal inicializado em: [cyan]{path}[/cyan]"
+        "[bold cyan]   / \\  | ____/ ___|_ _|  _ \\ / _ \\| \\ | |[/bold cyan]"
+    )
+    console.print(
+        "[bold cyan]  / _ \\ |  _| \\___ \\| || |_) | | | |  \\| |[/bold cyan]"
+    )
+    console.print("[bold cyan] / ___ \\| |___ ___) | ||  _ <| |_| | |\\  |[/bold cyan]")
+    console.print(
+        "[bold cyan]/_/   \\_\\_____|____/___|_| \\_\\ ___/|_| \\_|[/bold cyan]"
     )
 
 
 @app.command()
-def forge(name: str, port: int = typer.Option(8501, help="Porta para o app.")):
+def init(
+    path: Optional[str] = typer.Option(
+        None, "--path", "-p", help="Caminho customizado para o Arsenal"
+    ),
+):
+    """Inicializa o ambiente Aesiron (Arsenal)."""
+    banner()
+    armory_path = core.get_armory_dir(path)
+    console.print(
+        f"[bold green]✓[/bold green] Arsenal inicializado em: [cyan]{armory_path}[/cyan]"
+    )
+
+
+@app.command()
+def forge(
+    name: str,
+    port: int = typer.Option(8501, help="Porta para o app."),
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
     """Forja um novo app independente na Armaria."""
+    banner()
     try:
         with console.status(f"[bold yellow]Forjando {name}...[/bold yellow]"):
-            path = core.forge_app(name, port)
+            forge_path = core.forge_app(name, port, path)
         console.print(
-            f"[bold green]✓[/bold green] App [bold]{name}[/bold] forjado com sucesso em [cyan]{path}[/cyan] na porta [yellow]{port}[/yellow]!"
+            f"[bold green]✓[/bold green] App [bold]{name}[/bold] forjado com sucesso em [cyan]{forge_path}[/cyan] na porta [yellow]{port}[/yellow]!"
         )
     except Exception as e:
         console.print(f"[bold red]Erro:[/bold red] {e}")
@@ -32,9 +66,12 @@ def forge(name: str, port: int = typer.Option(8501, help="Porta para o app.")):
 
 
 @app.command()
-def list():
+def list(
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
     """Lista todos os apps forjados na Armaria."""
-    apps = core.list_apps()
+    banner()
+    apps = core.list_apps(path)
     if not apps:
         console.print("[yellow]Nenhum app encontrado na Armaria.[/yellow]")
         return
@@ -55,32 +92,38 @@ def list():
 
 
 @app.command()
-def run(name: Optional[str] = typer.Argument(None)):
+def run(
+    name: Optional[str] = typer.Argument(None),
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
     """Inicia os apps (todos ou um específico)."""
-    apps = [name] if name else core.list_apps()
+    apps = [name] if name else core.list_apps(path)
     if not apps:
         console.print("[yellow]Nenhum app para rodar.[/yellow]")
         return
 
     for app_name in apps:
         console.print(f"🚀 Iniciando [bold]{app_name}[/bold]...")
-        output = core.run_docker_command(app_name, "run")
+        output = core.run_docker_command(app_name, "run", path)
         console.print(output)
 
     urls()
 
 
 @app.command()
-def stop(name: Optional[str] = typer.Argument(None)):
+def stop(
+    name: Optional[str] = typer.Argument(None),
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
     """Para os apps (todos ou um específico)."""
-    apps = [name] if name else core.list_apps()
+    apps = [name] if name else core.list_apps(path)
     if not apps:
         console.print("[yellow]Nenhum app para parar.[/yellow]")
         return
 
     for app_name in apps:
         console.print(f"🛑 Parando [bold]{app_name}[/bold]...")
-        output = core.run_docker_command(app_name, "down")
+        output = core.run_docker_command(app_name, "down", path)
         console.print(output)
 
 
@@ -136,11 +179,14 @@ def urls():
 
 
 @app.command()
-def destroy(name: str):
+def destroy(
+    name: str,
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
     """Remove um app permanentemente da Armaria."""
     if typer.confirm(f"Tem certeza que deseja DESTRUIR o app '{name}'?"):
         try:
-            core.destroy_app(name)
+            core.destroy_app(name, path)
             console.print(
                 f"[bold green]✓[/bold green] App [bold]{name}[/bold] destruído com sucesso."
             )

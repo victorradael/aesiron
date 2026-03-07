@@ -27,82 +27,80 @@ Certifique-se de ter as seguintes ferramentas instaladas em sua máquina:
 
 ## 🚀 Como Começar
 
-O Aesiron foi projetado para ser direto ao ponto. A principal interface de interação é o `Makefile`, que é totalmente **auto-documentado**.
+O Aesiron foi projetado para ser um **Ferreiro de Software**. A principal interface de interação é o `Makefile` na raiz, que orquestra a criação e execução de apps independentes.
 
 ### 1. Configuração Inicial
 
-Prepare seu ambiente de desenvolvimento local (isto cria o ambiente virtual Python e instala dependências básicas):
+Antes de forjar seus aplicativos, você precisa criar o "Arsenal" (o repositório irmão) onde os apps gerados serão salvos. Ele deve ficar **exatamente no mesmo nível de diretório** que a pasta do Aesiron.
 
 ```bash
-make setup-dev
+# Volte uma pasta para trás, caso esteja dentro do aesiron
+cd ..
+mkdir aesiron-armory
+cd aesiron
 ```
 
 ### 2. Criando o seu Primeiro App
 
-Crie um novo app a partir do template padrão informando o **nome do app** e a **porta**:
+Crie um novo app independente informando o **nome** e a **porta**:
 
 ```bash
 make app meu-app 8501
 ```
 
-Isso forjará a estrutura do app no repositório irmão em `../aesiron-armory/meu-app` e o adicionará automaticamente ao arquivo `compose.yml` da ferramenta.
-> **Aviso:** Lembre-se de configurar o arquivo `.env` gerado dentro da pasta do seu novo app, caso necessite de chaves secretas ou configuração de banco de dados.
+Isso forjará a estrutura completa do app em `../aesiron-armory/meu-app`. O app gerado é **autossuficiente** e possui seu próprio `compose.yml` e `Makefile`.
 
-### 3. Subindo os Serviços
+### 3. Orquestração e Execução
 
-Inicie todos os seus apps em background com o comando:
+Você pode gerenciar seus apps de duas formas:
 
+**A. Pelo Aesiron (Orquestração Massiva):**
+Na raiz do Aesiron, você pode comandar todos os apps da Armaria ao mesmo tempo:
 ```bash
+make run          # Sobe TODOS os apps da Armaria
+make run meu-app  # Sobe apenas um app específico
+make down         # Derruba todos
+```
+
+**B. Pelo Aplicativo (Execução Isolada):**
+Você pode entrar na pasta de qualquer app na Armaria e usar os comandos locais:
+```bash
+cd ../aesiron-armory/meu-app
 make run
 ```
 
-Se quiser iniciar apenas o novo app que você acabou de criar (e deixar os demais parados), basta informar o nome dele:
-
-```bash
-make run meu-app
-```
-
-Pronto! Seu app estará rodando e disponível na porta que você configurou.
-
 ---
 
-## 🎯 Comandos Úteis (Make)
-
-Você não precisa decorar dezenas de comandos Docker. Para ver a lista completa de ações possíveis, basta rodar:
-
-```bash
-make help
-```
-
-Isso exibirá todos os atalhos diretamente no seu terminal, incluindo os mais comuns:
+## 🎯 Comandos do Aesiron (Ferreiro)
 
 | Comando | Descrição |
 |---|---|
-| `make app <nome> <porta>` | Cria um novo app Streamlit na armory (Ex: `make app painel 8502`) |
-| `make remove <nome>` | Remove completamente um app existente da armory e do compose local |
-| `make run [nome]` / `make dev [nome]` | Inicia os serviços (todos ou usando um nome em modo bg/interativo) |
-| `make down [nome]` | Para e remove todos os contêineres e a rede (ou apenas de um app) |
-| `make logs [nome]` | Exibe os logs contínuos de todos os apps (ou de um específico) em execução |
-| `make urls` | Mostra as URLs locais para explorar e acessar os apps na sua rede (Wi-Fi) |
-| `make clean` | Limpa imagens Docker descartáveis para poupar espaço no HD |
+| `make app <nome> <porta>` | Forja um novo app independente na Armaria |
+| `make remove <nome>` | Remove um app permanentemente da Armaria |
+| `make run [nome]` | Inicia apps (todos ou um específico) |
+| `make down [nome]` | Para os apps |
+| `make logs [nome]` | Exibe logs dos apps |
+| `make urls` | Mostra as URLs de todos os apps rodando na rede |
+| `make clean` | Limpa imagens Docker `app-aesiron-*` |
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Estrutura Descentralizada
 
-A organização do repositório foi pensada em formato de "Ferreiro e Armaria". A ferramenta mora num repositório e seus projetos moram em outro, paralelos entre si:
+A nova arquitetura garante que a ferramenta (`aesiron`) e os produtos (`armory`) vivam separados:
 
 ```text
 projetos/
-├── aesiron/                # A "Forja": O gerador e orquestrador via Docker centralizado
-│   ├── template/           # Template base utilizado pelo comando "make app"
-│   ├── assets/             # Recursos visuais (logo)
-│   ├── compose.yml         # Arquivo mestre de orquestração do Docker
-│   └── Makefile            # Central de comandos e gerenciamento
+├── aesiron/                # O "Ferreiro": Gerador e Orquestrador Massivo
+│   ├── template/           # Moldes (Templates) dos apps
+│   └── Makefile            # Painel de Controle Central
 │
-└── aesiron-armory/         # O "Arsenal": A sua coleção de apps gerados independentes
-    ├── meu-app-1/          # App independente com seu próprio código e .env
-    └── meu-app-2/          # Outro app...
+└── aesiron-armory/         # O "Arsenal": Coleção de Apps Independentes
+    └── meu-app/
+        ├── app/            # Código Python/Streamlit
+        ├── compose.yml     # Orquestração local do app
+        ├── Makefile        # Comandos locais do app
+        └── .env            # Configurações sensíveis
 ```
 
 ---

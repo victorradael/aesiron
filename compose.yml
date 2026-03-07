@@ -3,17 +3,6 @@ networks:
     external: true
 
 services:
-
-  build_keeper:
-    build: ./../aesiron-armory/build_keeper
-    image: app-aesiron-build_keeper
-    container_name: app-aesiron-build_keeper
-    volumes:
-      - ./../aesiron-armory/build_keeper/app:/app
-    ports:
-      - "8503:8503"
-    env_file:
-      - ./../aesiron-armory/build_keeper/.env
-    networks:
-      - aesiron-net
-
+  # O Aesiron agora gerencia apps de forma descentralizada.
+  # Cada app em ../aesiron-armory possui seu próprio compose.yml.
+  # Use 'make run' na raiz para subir todos ou 'make run <nome>' para um específico.

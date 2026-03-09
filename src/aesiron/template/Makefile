@@ -5,10 +5,10 @@ APP_NAME := {{APP_NAME}}
 .PHONY: run dev down logs
 
 run: ## Sobe o app em background
-	$(COMPOSE) up -d
+	$(COMPOSE) up --build -d
 
 dev: ## Sobe o app em modo interativo
-	$(COMPOSE) up
+	$(COMPOSE) up --build
 
 down: ## Para o app
 	$(COMPOSE) down

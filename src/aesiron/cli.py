@@ -130,9 +130,31 @@ def stop(
 @app.command()
 def urls():
     """Mostra as URLs de acesso local para os apps rodando."""
-    import socket
 
     def get_ip():
+        import os
+
+        # Se estamos rodando dentro de um container Docker (onde a CLI foi chamada via imagem)
+        if os.path.exists("/.dockerenv"):
+            try:
+                import docker
+
+                client = docker.from_env()
+                # Roda um container rápido na rede host para descobrir o IP real da LAN
+                script = "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(('10.255.255.255', 1)); print(s.getsockname()[0], end='')"
+                out = client.containers.run(
+                    "python:3.11-slim",
+                    f'python -c "{script}"',
+                    network_mode="host",
+                    remove=True,
+                )
+                return out.decode("utf-8").strip()
+            except Exception:
+                pass  # Fallback caso a API do Docker não esteja disponível
+
+        # Comportamento padrão (p/ quando instalada via pip no host ou fallback)
+        import socket
+
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             s.connect(("10.255.255.255", 1))

@@ -12,7 +12,6 @@ src/aesiron.egg-info/top_level.txt
 src/aesiron/template/.env.example
 src/aesiron/template/Dockerfile
 src/aesiron/template/Makefile
-src/aesiron/template/Makefile.root
 src/aesiron/template/compose.yml
 src/aesiron/template/requirements.txt
 src/aesiron/template/app/app.py

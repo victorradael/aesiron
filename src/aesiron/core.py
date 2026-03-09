@@ -18,8 +18,7 @@ def get_armory_dir(custom_path: str = None):
     Define o Arsenal. Ordem de prioridade:
     1. Argumento direto da CLI
     2. Variável de ambiente AESIRON_ARMORY
-    3. Padrão 1: ../aesiron-armory (caso de desenvolvimento, vizinho da pasta aesiron)
-    4. Padrão 2: ./aesiron-armory (uso standalone local)
+    3. Diretório atual (CWD)
     """
     if custom_path:
         path = Path(custom_path).resolve()
@@ -28,13 +27,7 @@ def get_armory_dir(custom_path: str = None):
         if armory_env:
             path = Path(armory_env).resolve()
         else:
-            # Prioriza o vizinho do diretório pai (comum no dev do projeto)
-            parent_neighbor = Path.cwd().parent / "aesiron-armory"
-            if parent_neighbor.exists() and parent_neighbor.is_dir():
-                path = parent_neighbor
-            else:
-                # Caso contrário, usa/cria no diretório atual
-                path = Path.cwd() / "aesiron-armory"
+            path = Path.cwd()
 
     path.mkdir(parents=True, exist_ok=True)
     return path

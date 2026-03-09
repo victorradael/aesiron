@@ -38,11 +38,11 @@ def init(
         None, "--path", "-p", help="Caminho customizado para o Arsenal"
     ),
 ):
-    """Inicializa o ambiente Aesiron (Arsenal)."""
+    """Inicializa um diretório como um ambiente Aesiron (Arsenal)."""
     banner()
     armory_path = core.get_armory_dir(path)
     console.print(
-        f"[bold green]✓[/bold green] Arsenal inicializado em: [cyan]{armory_path}[/cyan]"
+        f"[bold green]✓[/bold green] Arsenal inicializado no diretório atual: [cyan]{armory_path}[/cyan]"
     )
 
 

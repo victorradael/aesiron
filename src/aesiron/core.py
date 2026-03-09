@@ -59,8 +59,6 @@ def forge_app(name: str, port: int, armory_path: str = None):
 
     # Copiar template (incluindo arquivos ocultos)
     for item in TEMPLATE_DIR.iterdir():
-        if item.name == "Makefile.root":
-            continue
         dest = app_dir / item.name
         if item.is_dir():
             shutil.copytree(item, dest)

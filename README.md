@@ -30,7 +30,7 @@ Se você tem Docker, pode usar a CLI sem instalar nada no seu host.
 *(Recomendamos usar uma tag de versão específica, ex: `:0.1.0`, para maior estabilidade)*:
 ```bash
 # Crie um alias para facilitar o uso (você pode escolher aesiron ou iron)
-alias iron='docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/armory -e HOST_PWD=$(pwd) victorradael/aesiron:latest'
+alias iron='docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/armory -e HOST_PWD=$(pwd) -e HOST_UID=$(id -u) -e HOST_GID=$(id -g) victorradael/aesiron:latest'
 
 # Forjando um app
 iron forge meu-app --port 8501

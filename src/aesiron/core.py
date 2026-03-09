@@ -89,6 +89,24 @@ def forge_app(name: str, port: int, armory_path: str = None):
     if env_example.exists():
         shutil.copy2(env_example, app_dir / ".env")
 
+    # Ajusta as permissões dos arquivos gerados caso rodando sob o alias (Docker)
+    host_uid_str = os.getenv("HOST_UID")
+    host_gid_str = os.getenv("HOST_GID")
+    if host_uid_str and host_gid_str:
+        try:
+            uid = int(host_uid_str)
+            gid = int(host_gid_str)
+            for file_root, dirs, files_list in os.walk(app_dir):
+                for d in dirs:
+                    os.chown(os.path.join(file_root, d), uid, gid)
+                for f in files_list:
+                    os.chown(os.path.join(file_root, f), uid, gid)
+            os.chown(app_dir, uid, gid)
+        except Exception as e:
+            console.print(
+                f"[yellow]Aviso: Não foi possível alterar a permissão dos arquivos para o usuário host: {e}[/yellow]"
+            )
+
     return app_dir
 
 

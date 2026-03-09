@@ -71,8 +71,14 @@ def forge_app(name: str, port: int, armory_path: str = None):
             path = Path(root) / file
             try:
                 content = path.read_text(encoding="utf-8")
-                new_content = content.replace("{{APP_NAME}}", name).replace(
-                    "{{PORT}}", str(port)
+                # Se estamos rodando no Docker via alias, usamos o HOST_PWD pra formatar o caminho do volume.
+                # Senão, usamos './' (que resolve localmente).
+                host_pwd = os.getenv("HOST_PWD")
+                app_host_path = f"{host_pwd}/{name}" if host_pwd else "."
+                new_content = (
+                    content.replace("{{APP_NAME}}", name)
+                    .replace("{{PORT}}", str(port))
+                    .replace("{{APP_HOST_PATH}}", app_host_path)
                 )
                 if content != new_content:
                     path.write_text(new_content, encoding="utf-8")

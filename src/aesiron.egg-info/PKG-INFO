@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: aesiron
-Version: 0.1.3
+Version: 0.1.5
 Summary: A CLI tool to forge and manage multiple Streamlit apps with Docker.
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
@@ -41,7 +41,7 @@ Se você tem Docker, pode usar a CLI sem instalar nada no seu host.
 *(Recomendamos usar uma tag de versão específica, ex: `:0.1.0`, para maior estabilidade)*:
 ```bash
 # Crie um alias para facilitar o uso (você pode escolher aesiron ou iron)
-alias iron='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/work -w /work victorradael/aesiron:latest'
+alias iron='docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/armory -e HOST_PWD=$(pwd) victorradael/aesiron:latest'
 
 # Forjando um app
 iron forge meu-app --port 8501
@@ -51,17 +51,17 @@ iron forge meu-app --port 8501
 
 ## 🚀 Como Funciona
 
-O Aesiron gerencia um **Arsenal (Armory)**: uma pasta onde seus apps independentes são criados.
+O Aesiron gerencia um **Arsenal (Armory)**: diretório atual (`cwd`) onde seus apps independentes são criados.
 
 1.  **Forjando um App**:
     ```bash
     aesiron forge meu-dashboard --port 8501
     ```
-    Isso cria a pasta `aesiron-armory/meu-dashboard` com tudo que o app precisa (Dockerfile, Compose, Makefile local).
+    Isso cria a pasta `./meu-dashboard` com tudo que o app precisa (Dockerfile, Compose, Makefile local).
 
 2.  **Orquestração Massiva**:
     ```bash
-    aesiron run          # Sobe TODOS os apps encontrados no Arsenal
+    aesiron run          # Sobe TODOS os apps encontrados na pasta
     aesiron list         # Mostra quais apps estão rodando
     aesiron urls         # Exibe as URLs de acesso de todos os apps
     ```

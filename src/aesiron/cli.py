@@ -11,6 +11,42 @@ app = typer.Typer(
 console = Console()
 
 
+def version_callback(value: bool):
+    if value:
+        import importlib.metadata
+        try:
+            __version__ = importlib.metadata.version("aesiron")
+        except importlib.metadata.PackageNotFoundError:
+            __version__ = "unknown"
+        console.print(f"Aesiron v[bold cyan]{__version__}[/bold cyan]")
+        raise typer.Exit()
+
+
+@app.callback()
+def callback(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        "-v",
+        help="Mostra a versão da CLI e sai.",
+        callback=version_callback,
+        is_eager=True,
+    )
+):
+    pass
+
+
+@app.command()
+def version():
+    """Mostra a versão atual da CLI."""
+    import importlib.metadata
+    try:
+        __version__ = importlib.metadata.version("aesiron")
+    except importlib.metadata.PackageNotFoundError:
+        __version__ = "unknown"
+    console.print(f"Aesiron v[bold cyan]{__version__}[/bold cyan]")
+
+
 @app.command()
 def help(ctx: typer.Context):
     """Mostra esta mensagem de ajuda."""

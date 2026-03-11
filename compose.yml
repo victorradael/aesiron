@@ -1,0 +1,13 @@
+services:
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aesiron:local
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOST_PWD:-.}:/armory
+    environment:
+      - HOST_PWD=${HOST_PWD:-.}
+      - HOST_UID=${HOST_UID:-1000}
+      - HOST_GID=${HOST_GID:-1000}

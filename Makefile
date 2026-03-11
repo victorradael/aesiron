@@ -19,6 +19,9 @@ setup-dev: ## Prepara o ambiente virtual para desenvolvimento
 
 install-dev: setup-dev ## Instala dependências de desenvolvimento
 
+test-cli: ## Testa a CLI local via Docker Compose (ex: make test-cli cmd="help")
+	@HOST_PWD=$$PWD HOST_UID=$$(id -u) HOST_GID=$$(id -g) docker compose run --rm cli $(cmd)
+
 build: ## Versão de build (exemplo)
 	@$(PYTHON) -m pip install build
 	@$(PYTHON) -m build

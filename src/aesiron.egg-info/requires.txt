@@ -2,3 +2,7 @@ typer[all]
 rich
 docker
 jinja2
+
+[dev]
+pytest>=8.0
+pytest-mock>=3.12

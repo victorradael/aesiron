@@ -3,7 +3,7 @@ VENV := .venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 
-.PHONY: help setup-dev install-dev build lint clean-all
+.PHONY: help setup-dev install-dev build lint test clean-all
 
 .DEFAULT_GOAL := help
 
@@ -14,13 +14,16 @@ help: ## Mostra esta ajuda (Comandos para DEVELOPERS)
 setup-dev: ## Prepara o ambiente virtual para desenvolvimento
 	@python3 -m venv $(VENV)
 	@$(PIP) install --upgrade pip setuptools
-	@$(PIP) install -e .
+	@$(PIP) install -e ".[dev]"
 	@echo "Ambiente de dev configurado. Ative com: source $(VENV)/bin/activate"
 
 install-dev: setup-dev ## Instala dependências de desenvolvimento
 
 test-cli: ## Testa a CLI local via Docker Compose (ex: make test-cli cmd="help")
 	@HOST_PWD=$$PWD HOST_UID=$$(id -u) HOST_GID=$$(id -g) docker compose run --rm cli $(cmd)
+
+test: ## Roda os testes automatizados com pytest
+	@$(VENV)/bin/pytest tests/ -v
 
 build: ## Versão de build (exemplo)
 	@$(PYTHON) -m pip install build

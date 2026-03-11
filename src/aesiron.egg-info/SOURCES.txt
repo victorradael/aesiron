@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 src/aesiron/__init__.py
@@ -20,3 +21,5 @@ src/aesiron/template/app/core/logger.py
 src/aesiron/template/app/core/settings.py
 src/aesiron/template/app/ui/__init__.py
 src/aesiron/template/app/ui/components.py
+tests/test_cli.py
+tests/test_core.py

@@ -1,13 +1,18 @@
 Metadata-Version: 2.4
 Name: aesiron
-Version: 0.1.5
+Version: 0.2.1
 Summary: A CLI tool to forge and manage multiple Streamlit apps with Docker.
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
+License-File: LICENSE
 Requires-Dist: typer[all]
 Requires-Dist: rich
 Requires-Dist: docker
 Requires-Dist: jinja2
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.12; extra == "dev"
+Dynamic: license-file
 
 <p align="center">
   <img src="./assets/aesiron.png" width="250" alt="Aesiron Logo" />
@@ -41,7 +46,7 @@ Se você tem Docker, pode usar a CLI sem instalar nada no seu host.
 *(Recomendamos usar uma tag de versão específica, ex: `:0.1.0`, para maior estabilidade)*:
 ```bash
 # Crie um alias para facilitar o uso (você pode escolher aesiron ou iron)
-alias iron='docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/armory -e HOST_PWD=$(pwd) victorradael/aesiron:latest'
+alias iron='docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/armory -e HOST_PWD=$(pwd) -e HOST_UID=$(id -u) -e HOST_GID=$(id -g) victorradael/aesiron:latest'
 
 # Forjando um app
 iron forge meu-app --port 8501

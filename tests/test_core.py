@@ -1,0 +1,183 @@
+"""
+tests/test_core.py
+Testes unitários para as funções de core.py — Fase RED (TDD).
+Todos os testes devem FALHAR antes da implementação.
+"""
+import pytest
+from unittest.mock import MagicMock
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def armory(tmp_path):
+    """Cria um Arsenal temporário com um app de exemplo."""
+    app_dir = tmp_path / "my-app"
+    app_dir.mkdir()
+    # Arquivos mínimos para o app ser reconhecido
+    (app_dir / "Makefile").write_text("APP_NAME=my-app\nPORT=8501\n")
+    (app_dir / "compose.yml").write_text("services:\n  my-app:\n    image: my-app\n")
+    (app_dir / "Dockerfile").write_text("FROM python:3.12-slim\n# my-app\n")
+    return tmp_path
+
+
+@pytest.fixture
+def mock_docker_client(mocker):
+    """Mocka o cliente Docker utilizado em core.py."""
+    mock_client = MagicMock()
+    mocker.patch("aesiron.core.client", mock_client)
+    return mock_client
+
+
+# ---------------------------------------------------------------------------
+# restart_app
+# ---------------------------------------------------------------------------
+
+class TestRestartApp:
+    def test_restart_app_stops_and_starts(self, armory, mock_docker_client, mocker):
+        """Deve chamar 'make down' antes de 'make run'."""
+        from aesiron import core
+
+        call_order = []
+
+        def fake_run(cmd, **kwargs):
+            call_order.append(cmd[-1])  # captura o alvo do make: 'down' ou 'run'
+            result = MagicMock()
+            result.stdout = ""
+            result.stderr = ""
+            return result
+
+        mocker.patch("aesiron.core.subprocess.run", side_effect=fake_run)
+        # Garante que a rede já existe
+        mock_docker_client.networks.get.return_value = MagicMock()
+
+        core.restart_app("my-app", str(armory))
+
+        assert call_order == ["down", "run"]
+
+    def test_restart_app_not_found_raises(self, armory):
+        """Deve levantar ValueError para app que não existe."""
+        from aesiron import core
+
+        with pytest.raises(ValueError, match="not found"):
+            core.restart_app("app-inexistente", str(armory))
+
+
+# ---------------------------------------------------------------------------
+# get_app_logs
+# ---------------------------------------------------------------------------
+
+class TestGetAppLogs:
+    def test_get_app_logs_returns_lines(self, armory, mock_docker_client):
+        """Deve retornar as últimas N linhas de log do container."""
+        from aesiron import core
+
+        fake_container = MagicMock()
+        fake_container.logs.return_value = b"linha1\nlinha2\nlinha3\n"
+        mock_docker_client.containers.get.return_value = fake_container
+
+        logs = core.get_app_logs("my-app", str(armory), tail=10, follow=False)
+
+        mock_docker_client.containers.get.assert_called_once_with("app-aesiron-my-app")
+        fake_container.logs.assert_called_once_with(tail=10, stream=False)
+        assert "linha1" in logs
+        assert "linha2" in logs
+
+    def test_get_app_logs_container_not_found(self, armory, mock_docker_client):
+        """Deve levantar ValueError quando o container não está rodando."""
+        from aesiron import core
+        import docker
+
+        mock_docker_client.containers.get.side_effect = docker.errors.NotFound("nope")
+
+        with pytest.raises(ValueError, match="not running"):
+            core.get_app_logs("my-app", str(armory), tail=10, follow=False)
+
+
+# ---------------------------------------------------------------------------
+# get_app_status
+# ---------------------------------------------------------------------------
+
+class TestGetAppStatus:
+    def test_get_app_status_running(self, armory, mock_docker_client):
+        """Deve retornar lista com dicionário de métricas para cada container."""
+        from aesiron import core
+
+        fake_container = MagicMock()
+        fake_container.name = "app-aesiron-my-app"
+        fake_container.attrs = {
+            "NetworkSettings": {"Ports": {"8501/tcp": [{"HostPort": "8501"}]}},
+            "State": {"StartedAt": "2026-03-11T10:00:00Z"},
+        }
+        fake_container.stats.return_value = {
+            "cpu_stats": {
+                "cpu_usage": {"total_usage": 200_000_000},
+                "system_cpu_usage": 1_000_000_000,
+                "online_cpus": 2,
+            },
+            "precpu_stats": {
+                "cpu_usage": {"total_usage": 100_000_000},
+                "system_cpu_usage": 900_000_000,
+            },
+            "memory_stats": {"usage": 50 * 1024 * 1024, "limit": 1024 * 1024 * 1024},
+        }
+        mock_docker_client.containers.list.return_value = [fake_container]
+
+        result = core.get_app_status(str(armory))
+
+        assert len(result) == 1
+        entry = result[0]
+        assert entry["name"] == "my-app"
+        assert entry["port"] == "8501"
+        assert "cpu_pct" in entry
+        assert "ram_mb" in entry
+        assert "uptime" in entry
+
+    def test_get_app_status_empty(self, mock_docker_client):
+        """Deve retornar lista vazia quando nenhum container roda."""
+        from aesiron import core
+
+        mock_docker_client.containers.list.return_value = []
+
+        result = core.get_app_status()
+
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# rename_app
+# ---------------------------------------------------------------------------
+
+class TestRenameApp:
+    def test_rename_app_renames_dir_and_updates_files(self, armory, mock_docker_client, mocker):
+        """Deve renomear o diretório e substituir o nome nos arquivos de config."""
+        from aesiron import core
+
+        mocker.patch("aesiron.core.subprocess.run", return_value=MagicMock(stdout="", stderr=""))
+        mock_docker_client.images.remove.return_value = None
+
+        core.rename_app("my-app", "new-app", str(armory))
+
+        new_dir = armory / "new-app"
+        old_dir = armory / "my-app"
+
+        assert new_dir.exists()
+        assert not old_dir.exists()
+
+        makefile_content = (new_dir / "Makefile").read_text()
+        assert "new-app" in makefile_content
+        assert "my-app" not in makefile_content
+
+    def test_rename_app_destination_exists_raises(self, armory):
+        """Deve levantar ValueError se o novo nome já existe."""
+        from aesiron import core
+
+        # Cria o app destino manualmente
+        dest = armory / "new-app"
+        dest.mkdir()
+        (dest / "Makefile").write_text("")
+
+        with pytest.raises(ValueError, match="already exists"):
+            core.rename_app("my-app", "new-app", str(armory))

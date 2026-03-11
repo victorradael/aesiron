@@ -252,5 +252,129 @@ def destroy(
             console.print(f"[bold red]Erro:[/bold red] {e}")
 
 
+@app.command()
+def restart(
+    name: Optional[str] = typer.Argument(None),
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
+    """Reinicia os apps (todos ou um específico)."""
+    apps = [name] if name else core.list_apps(path)
+    if not apps:
+        console.print("[yellow]Nenhum app encontrado para reiniciar.[/yellow]")
+        return
+
+    for app_name in apps:
+        try:
+            with console.status(f"[bold yellow]Reiniciando {app_name}...[/bold yellow]"):
+                core.restart_app(app_name, path)
+            console.print(
+                f"[bold green]✓[/bold green] App [bold]{app_name}[/bold] reiniciado com sucesso."
+            )
+        except Exception as e:
+            console.print(f"[bold red]Erro:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
+
+@app.command()
+def logs(
+    name: str,
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+    tail: int = typer.Option(100, "--tail", "-n", help="Número de linhas a exibir."),
+    follow: bool = typer.Option(False, "--follow", "-f", help="Seguir os logs em tempo real."),
+):
+    """Exibe os logs de um app."""
+    try:
+        output = core.get_app_logs(name, path, tail=tail, follow=follow)
+        if follow:
+            console.print(f"[dim]Seguindo logs de [bold]{name}[/bold] — Ctrl+C para sair[/dim]\n")
+            try:
+                for chunk in output:
+                    if isinstance(chunk, bytes):
+                        chunk = chunk.decode("utf-8", errors="replace")
+                    console.print(chunk, end="")
+            except KeyboardInterrupt:
+                console.print("\n[dim]Streaming encerrado.[/dim]")
+        else:
+            console.print(output)
+    except ValueError as e:
+        console.print(f"[bold red]Erro:[/bold red] {e}")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def status(
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
+    """Exibe um painel com métricas de todos os apps rodando."""
+    app_list = core.list_apps(path)
+
+    if not app_list:
+        console.print("[yellow]Nenhum app encontrado no Arsenal.[/yellow]")
+        return
+
+    statuses = core.get_app_status(path)
+
+    if not statuses:
+        console.print(
+            "\n[bold red][!] Nenhuma aplicação está rodando no momento.[/bold red]\n"
+        )
+        return
+
+    running_names = {s["name"] for s in statuses}
+
+    table = Table(title="Status do Arsenal", border_style="cyan")
+    table.add_column("App", style="bold cyan", no_wrap=True)
+    table.add_column("Status", justify="center")
+    table.add_column("Porta", justify="center", style="yellow")
+    table.add_column("Uptime", justify="right")
+    table.add_column("CPU", justify="right", style="magenta")
+    table.add_column("RAM", justify="right", style="green")
+
+    status_map = {s["name"]: s for s in statuses}
+
+    for app_name in app_list:
+        if app_name in running_names:
+            s = status_map[app_name]
+            table.add_row(
+                app_name,
+                "[bold green]✅ Rodando[/bold green]",
+                s["port"],
+                s["uptime"],
+                s["cpu_pct"],
+                s["ram_mb"],
+            )
+        else:
+            table.add_row(
+                app_name,
+                "[dim]⛔ Parado[/dim]",
+                "—",
+                "—",
+                "—",
+                "—",
+            )
+
+    console.print(table)
+
+
+@app.command()
+def rename(
+    old_name: str,
+    new_name: str,
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
+    """Renomeia um app existente na Armaria."""
+    if typer.confirm(f"Renomear '{old_name}' → '{new_name}'?"):
+        try:
+            with console.status(f"[bold yellow]Renomeando {old_name} → {new_name}...[/bold yellow]"):
+                core.rename_app(old_name, new_name, path)
+            console.print(
+                f"[bold green]✓[/bold green] App renomeado: "
+                f"[bold]{old_name}[/bold] → [bold cyan]{new_name}[/bold cyan]"
+            )
+        except Exception as e:
+            console.print(f"[bold red]Erro:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":
     app()

@@ -150,3 +150,148 @@ def destroy_app(name: str, armory_path: str = None):
         pass
 
     shutil.rmtree(app_dir)
+
+
+def restart_app(name: str, armory_path: str = None):
+    """Para e reinicia um app existente."""
+    armory = get_armory_dir(armory_path)
+    app_dir = armory / name
+    if not app_dir.exists():
+        raise ValueError(f"App {name} not found in {armory}.")
+
+    run_docker_command(name, "down", armory_path)
+    run_docker_command(name, "run", armory_path)
+
+
+def get_app_logs(name: str, armory_path: str = None, tail: int = 100, follow: bool = False):
+    """
+    Retorna os logs do container de um app.
+    Se follow=True, retorna um gerador de linhas para streaming.
+    Se follow=False, retorna uma string com as últimas `tail` linhas.
+    """
+    container_name = f"app-aesiron-{name}"
+    try:
+        container = client.containers.get(container_name)
+    except docker.errors.NotFound:
+        raise ValueError(f"App {name} is not running (container '{container_name}' not found).")
+
+    if follow:
+        return container.logs(tail=tail, stream=True, follow=True)
+    else:
+        raw = container.logs(tail=tail, stream=False)
+        return raw.decode("utf-8", errors="replace")
+
+
+def get_app_status(armory_path: str = None):
+    """
+    Retorna uma lista de dicionários com métricas de cada container rodando.
+    Campos: name, status, port, uptime, cpu_pct, ram_mb.
+    """
+    from datetime import datetime, timezone
+
+    containers = get_running_containers()
+    result = []
+
+    for container in containers:
+        app_name = container.name.replace("app-aesiron-", "")
+
+        # Porta
+        ports = container.attrs["NetworkSettings"]["Ports"]
+        port = ""
+        for p in ports:
+            if ports[p]:
+                port = ports[p][0]["HostPort"]
+                break
+
+        # Uptime
+        started_at_str = container.attrs["State"]["StartedAt"]
+        try:
+            # Python <3.11 não suporta 'Z' diretamente — normaliza
+            started_at_str = started_at_str[:26].rstrip("Z") + "+00:00"
+            started_at = datetime.fromisoformat(started_at_str).replace(tzinfo=timezone.utc)
+            delta = datetime.now(timezone.utc) - started_at
+            total_seconds = int(delta.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, _ = divmod(remainder, 60)
+            uptime = f"{hours}h {minutes:02d}m"
+        except Exception:
+            uptime = "—"
+
+        # CPU e RAM
+        try:
+            stats = container.stats(stream=False)
+
+            cpu_delta = (
+                stats["cpu_stats"]["cpu_usage"]["total_usage"]
+                - stats["precpu_stats"]["cpu_usage"]["total_usage"]
+            )
+            system_delta = (
+                stats["cpu_stats"].get("system_cpu_usage", 0)
+                - stats["precpu_stats"].get("system_cpu_usage", 0)
+            )
+            num_cpus = stats["cpu_stats"].get("online_cpus", 1)
+            cpu_pct = (
+                f"{(cpu_delta / system_delta) * num_cpus * 100:.1f}%"
+                if system_delta > 0
+                else "0.0%"
+            )
+
+            ram_bytes = stats["memory_stats"].get("usage", 0)
+            ram_mb = f"{ram_bytes / (1024 * 1024):.0f} MB"
+        except Exception:
+            cpu_pct = "—"
+            ram_mb = "—"
+
+        result.append(
+            {
+                "name": app_name,
+                "status": "running",
+                "port": port,
+                "uptime": uptime,
+                "cpu_pct": cpu_pct,
+                "ram_mb": ram_mb,
+            }
+        )
+
+    return result
+
+
+def rename_app(old_name: str, new_name: str, armory_path: str = None):
+    """
+    Renomeia um app: para o container, renomeia o diretório, substitui referências
+    nos arquivos de config e remove a imagem Docker antiga.
+    """
+    armory = get_armory_dir(armory_path)
+    old_dir = armory / old_name
+    new_dir = armory / new_name
+
+    if not old_dir.exists():
+        raise ValueError(f"App {old_name} not found in {armory}.")
+    if new_dir.exists():
+        raise ValueError(f"App {new_name} already exists in {armory}.")
+
+    # Para o container antes de renomear
+    subprocess.run(["make", "down"], cwd=old_dir, capture_output=True)
+
+    # Remove a imagem antiga
+    old_image = f"app-aesiron-{old_name}"
+    try:
+        client.images.remove(old_image, force=True)
+    except Exception:
+        pass
+
+    # Renomeia o diretório
+    old_dir.rename(new_dir)
+
+    # Substitui todas as ocorrências do nome antigo pelo novo nos arquivos de config
+    config_files = ["Makefile", "compose.yml", "docker-compose.yml", "Dockerfile", ".env"]
+    for filename in config_files:
+        file_path = new_dir / filename
+        if file_path.exists():
+            try:
+                content = file_path.read_text(encoding="utf-8")
+                new_content = content.replace(old_name, new_name)
+                if content != new_content:
+                    file_path.write_text(new_content, encoding="utf-8")
+            except (UnicodeDecodeError, PermissionError):
+                pass

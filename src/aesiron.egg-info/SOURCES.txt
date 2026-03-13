@@ -10,6 +10,13 @@ src/aesiron.egg-info/dependency_links.txt
 src/aesiron.egg-info/entry_points.txt
 src/aesiron.egg-info/requires.txt
 src/aesiron.egg-info/top_level.txt
+src/aesiron/domain/__init__.py
+src/aesiron/domain/errors.py
+src/aesiron/services/__init__.py
+src/aesiron/services/armory.py
+src/aesiron/services/docker.py
+src/aesiron/services/scaffold.py
+src/aesiron/services/status.py
 src/aesiron/template/.env.example
 src/aesiron/template/Dockerfile
 src/aesiron/template/Makefile

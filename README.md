@@ -59,17 +59,12 @@ O Aesiron gerencia um **Arsenal (Armory)**: diretório atual (`cwd`) onde seus a
 
 ## 🎯 Comandos da CLI
 
-*Dica: Você pode usar `aesiron <comando>` ou simplesmente `iron <comando>`.*
+A CLI é **auto-documentada**. Para ver todos os comandos e opções disponíveis, basta rodar:
 
-| Comando | Descrição |
-|---|---|
-| `iron help` | Mostra os comandos disponíveis |
-| `iron forge <nome>` | Cria um novo app independente |
-| `iron run [nome]` | Inicia um ou todos os apps |
-| `iron stop [nome]` | Para os containers |
-| `iron list` | Status dos apps no Arsenal |
-| `iron urls` | Painel de links de acesso |
-| `iron destroy <nome>` | Remove permanentemente um app |
+```bash
+iron --help
+iron <comando> --help
+```
 
 ---
 

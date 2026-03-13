@@ -4,6 +4,7 @@ Testes unitários para as funções de core.py — Fase RED (TDD).
 Todos os testes devem FALHAR antes da implementação.
 """
 import pytest
+from docker.errors import NotFound
 from unittest.mock import MagicMock
 
 
@@ -27,7 +28,7 @@ def armory(tmp_path):
 def mock_docker_client(mocker):
     """Mocka o cliente Docker utilizado em core.py."""
     mock_client = MagicMock()
-    mocker.patch("aesiron.core.client", mock_client)
+    mocker.patch("aesiron.services.docker.client", mock_client)
     return mock_client
 
 
@@ -49,7 +50,7 @@ class TestRestartApp:
             result.stderr = ""
             return result
 
-        mocker.patch("aesiron.core.subprocess.run", side_effect=fake_run)
+        mocker.patch("aesiron.services.docker.subprocess.run", side_effect=fake_run)
         # Garante que a rede já existe
         mock_docker_client.networks.get.return_value = MagicMock()
 
@@ -63,6 +64,67 @@ class TestRestartApp:
 
         with pytest.raises(ValueError, match="not found"):
             core.restart_app("app-inexistente", str(armory))
+
+
+# ---------------------------------------------------------------------------
+# helpers / seams
+# ---------------------------------------------------------------------------
+
+class TestCoreHelpers:
+    def test_resolve_armory_dir_prefers_argument_over_env(self, tmp_path):
+        from aesiron import core
+
+        resolved = core.resolve_armory_dir(
+            custom_path=str(tmp_path / "arg-armory"),
+            env={"AESIRON_ARMORY": str(tmp_path / "env-armory")},
+            cwd=tmp_path,
+        )
+
+        assert resolved == (tmp_path / "arg-armory").resolve()
+
+    def test_render_template_content_uses_host_pwd_when_available(self):
+        from aesiron import core
+
+        content = "{{APP_NAME}} {{PORT}} {{APP_HOST_PATH}}"
+
+        rendered = core.render_template_content(
+            content,
+            "my-app",
+            8501,
+            env={"HOST_PWD": "/workspace"},
+        )
+
+        assert rendered == "my-app 8501 /workspace/my-app"
+
+    def test_list_apps_does_not_create_missing_armory_dir(self, tmp_path):
+        from aesiron import core
+
+        missing = tmp_path / "missing-armory"
+
+        assert core.list_apps(str(missing)) == []
+        assert not missing.exists()
+
+    def test_get_app_urls_builds_structured_output(self, mocker):
+        from aesiron import core
+
+        fake_container = MagicMock()
+        fake_container.name = "app-aesiron-my-app"
+        fake_container.attrs = {
+            "NetworkSettings": {"Ports": {"8501/tcp": [{"HostPort": "8501"}]}}
+        }
+
+        mocker.patch("aesiron.services.docker.get_host_ip", return_value="192.168.0.10")
+        mocker.patch("aesiron.services.docker.get_running_containers", return_value=[fake_container])
+
+        result = core.get_app_urls()
+
+        assert result == [
+            {
+                "name": "my-app",
+                "port": "8501",
+                "url": "http://192.168.0.10:8501",
+            }
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -82,15 +144,15 @@ class TestGetAppLogs:
 
         mock_docker_client.containers.get.assert_called_once_with("app-aesiron-my-app")
         fake_container.logs.assert_called_once_with(tail=10, stream=False)
+        assert isinstance(logs, str)
         assert "linha1" in logs
         assert "linha2" in logs
 
     def test_get_app_logs_container_not_found(self, armory, mock_docker_client):
         """Deve levantar ValueError quando o container não está rodando."""
         from aesiron import core
-        import docker
 
-        mock_docker_client.containers.get.side_effect = docker.errors.NotFound("nope")
+        mock_docker_client.containers.get.side_effect = NotFound("nope")
 
         with pytest.raises(ValueError, match="not running"):
             core.get_app_logs("my-app", str(armory), tail=10, follow=False)
@@ -155,7 +217,7 @@ class TestRenameApp:
         """Deve renomear o diretório e substituir o nome nos arquivos de config."""
         from aesiron import core
 
-        mocker.patch("aesiron.core.subprocess.run", return_value=MagicMock(stdout="", stderr=""))
+        mocker.patch("aesiron.services.docker.subprocess.run", return_value=MagicMock(stdout="", stderr=""))
         mock_docker_client.images.remove.return_value = None
 
         core.rename_app("my-app", "new-app", str(armory))

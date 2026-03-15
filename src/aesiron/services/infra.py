@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import textwrap
 from pathlib import Path
-from typing import Any, List, Sequence, cast
+from typing import Any, List, Mapping, Sequence, cast
 
 from docker.errors import NotFound
 
@@ -48,6 +48,20 @@ def get_infra_dir(armory_path: str | None = None) -> Path:
     infra_dir = armory / INFRA_DIR_NAME
     infra_dir.mkdir(parents=True, exist_ok=True)
     return infra_dir
+
+
+def resolve_docker_bind_path(path: Path, env: Mapping[str, str] | None = None) -> Path:
+    env = os.environ if env is None else env
+    host_pwd = env.get("HOST_PWD")
+    if not host_pwd:
+        return path
+
+    try:
+        relative_path = path.resolve().relative_to(Path("/armory"))
+    except ValueError:
+        return path
+
+    return Path(host_pwd).resolve() / relative_path
 
 
 def get_gateway_config_path(armory_path: str | None = None) -> Path:
@@ -221,6 +235,7 @@ def ensure_gateway_service(containers: Sequence[Any], armory_path: str | None = 
 
     ensure_network()
     config_path = write_gateway_config(containers, armory_path)
+    bind_config_path = resolve_docker_bind_path(config_path)
     run_kwargs: dict[str, Any] = {
         "image": GATEWAY_IMAGE,
         "name": GATEWAY_CONTAINER_NAME,
@@ -228,7 +243,7 @@ def ensure_gateway_service(containers: Sequence[Any], armory_path: str | None = 
         "restart_policy": cast(Any, {"Name": "unless-stopped"}),
         "ports": {f"{GATEWAY_PORT}/tcp": GATEWAY_PORT},
         "volumes": {
-            str(config_path): {
+            str(bind_config_path): {
                 "bind": "/etc/nginx/nginx.conf",
                 "mode": "ro",
             }
@@ -244,6 +259,7 @@ def ensure_dns_service(host_ip: str, armory_path: str | None = None):
 
     ensure_network()
     config_path = write_dns_config(host_ip, get_upstream_nameservers(), armory_path)
+    bind_config_path = resolve_docker_bind_path(config_path)
     run_kwargs: dict[str, Any] = {
         "image": DNS_IMAGE,
         "name": DNS_CONTAINER_NAME,
@@ -254,7 +270,7 @@ def ensure_dns_service(host_ip: str, armory_path: str | None = None):
             f"{DNS_PORT}/tcp": (host_ip, DNS_PORT),
         },
         "volumes": {
-            str(config_path): {
+            str(bind_config_path): {
                 "bind": "/etc/dnsmasq.conf",
                 "mode": "ro",
             }

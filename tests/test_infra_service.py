@@ -71,6 +71,16 @@ class TestInfraHelpers:
         assert any("192.168.0.10" in line for line in lines)
         assert any(".iron" in line for line in lines)
 
+    def test_resolve_docker_bind_path_maps_armory_volume_when_host_pwd_exists(self):
+        from aesiron.services.infra import resolve_docker_bind_path
+
+        resolved = resolve_docker_bind_path(
+            Path("/armory/.aesiron-infra/nginx.conf"),
+            env={"HOST_PWD": "/home/user/projects/aesiron"},
+        )
+
+        assert resolved == Path("/home/user/projects/aesiron/.aesiron-infra/nginx.conf")
+
     def test_render_hosts_file_replaces_only_aesiron_block(self):
         from aesiron.services.infra import HOSTS_BEGIN_MARKER, HOSTS_END_MARKER, render_hosts_file
 

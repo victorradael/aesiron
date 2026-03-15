@@ -25,6 +25,12 @@ test-cli: ## Testa a CLI local via Docker Compose (ex: make test-cli cmd="help")
 test: ## Roda os testes automatizados com pytest
 	@$(VENV)/bin/pytest tests/ -v
 
+check-dns: ## Verifica a resolução de DNS de todos os apps forjados
+	@echo "Verificando resolução de DNS..."
+	@HOST_PWD=$$PWD HOST_UID=$$(id -u) HOST_GID=$$(id -g) docker compose run --rm cli urls | \
+	grep "http://" | grep ".iron" | awk '{print $$6}' | sed 's|http://||;s|/.*||' | \
+	xargs -I {} sh -c 'printf "%-25s -> " "{}"; ping -c 1 -W 1 {} > /dev/null 2>&1 && echo "\033[32m✓ OK\033[0m" || echo "\033[31m✗ FALHA\033[0m"'
+
 build: ## Versão de build (exemplo)
 	@$(PYTHON) -m pip install build
 	@$(PYTHON) -m build

@@ -13,6 +13,7 @@ dependencies = [
     "rich",
     "docker",
     "jinja2",
+    "PyYAML",
 ]
 
 [project.scripts]
@@ -20,7 +21,7 @@ aesiron = "aesiron.cli:app"
 iron = "aesiron.cli:app"
 
 [tool.setuptools.package-data]
-"aesiron" = ["template/**/*", "template/**/.*"]
+"aesiron" = ["template/**/*", "template/**/.*", "template/**/.*/**/*"]
 
 [project.optional-dependencies]
 dev = [

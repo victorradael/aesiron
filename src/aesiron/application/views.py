@@ -7,7 +7,15 @@ from .dto import AppOverview, AppStatus, AppStatusView, AppUrl
 
 
 def resolve_target_apps(name: Optional[str], path: Optional[str] = None):
-    return [name] if name else list_apps(path)
+    all_apps = list_apps(path)
+    if name:
+        if name not in all_apps:
+            from ..domain.errors import AppNotFoundError
+            from ..services.armory import get_armory_dir
+            armory = get_armory_dir(path, create=False)
+            raise AppNotFoundError(f"App '{name}' not found in {armory}.")
+        return [name]
+    return all_apps
 
 
 def get_apps_overview(path: Optional[str] = None):

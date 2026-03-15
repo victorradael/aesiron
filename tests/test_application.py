@@ -1,8 +1,19 @@
 class TestApplicationViews:
-    def test_resolve_target_apps_returns_explicit_name(self):
+    def test_resolve_target_apps_returns_explicit_name(self, mocker):
         from aesiron.application.views import resolve_target_apps
 
+        mocker.patch("aesiron.application.views.list_apps", return_value=["my-app"])
         assert resolve_target_apps("my-app", "/tmp/armory") == ["my-app"]
+
+    def test_resolve_target_apps_raises_error_if_not_found(self, mocker):
+        from aesiron.application.views import resolve_target_apps
+        from aesiron.domain.errors import AppNotFoundError
+
+        mocker.patch("aesiron.application.views.list_apps", return_value=["other-app"])
+        
+        import pytest
+        with pytest.raises(AppNotFoundError):
+            resolve_target_apps("my-app", "/tmp/armory")
 
     def test_get_apps_overview_marks_running_apps(self, mocker):
         from aesiron.application.dto import AppOverview

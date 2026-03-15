@@ -18,6 +18,7 @@ from .application import (
     run_apps_command,
     stop_apps_command,
 )
+from .domain.errors import AppNotFoundError
 
 app = typer.Typer(
     help="Aesiron: Forje e gerencie múltiplos apps Streamlit com Docker.",
@@ -100,11 +101,16 @@ def init(
 @app.command()
 def forge(
     name: str,
-    port: int = typer.Option(8501, help="Porta para o app."),
+    port: Optional[int] = typer.Option(None, help="Porta para o app. Se omitido, busca a próxima disponível a partir de 8501."),
     path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
 ):
     """Forja um novo app independente na Armaria."""
     banner()
+    from .services.docker import find_next_available_port
+
+    if port is None:
+        port = find_next_available_port(armory_path=path)
+
     try:
         with console.status(f"[bold yellow]Forjando {name}...[/bold yellow]"):
             forge_path = forge_app_command(name, port, path)
@@ -144,16 +150,20 @@ def run(
     path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
 ):
     """Inicia os apps (todos ou um específico)."""
-    executions = run_apps_command(name, path)
-    if not executions:
-        console.print("[yellow]Nenhum app para rodar.[/yellow]")
-        return
+    try:
+        executions = run_apps_command(name, path)
+        if not executions:
+            console.print("[yellow]Nenhum app para rodar.[/yellow]")
+            return
 
-    for execution in executions:
-        console.print(f"🚀 Iniciando [bold]{execution.name}[/bold]...")
-        console.print(execution.output)
+        for execution in executions:
+            console.print(f"🚀 Iniciando [bold]{execution.name}[/bold]...")
+            console.print(execution.output)
 
-    urls(path)
+        urls(path)
+    except AppNotFoundError as e:
+        console.print(f"[bold red]Erro:[/bold red] {e}")
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -162,14 +172,18 @@ def stop(
     path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
 ):
     """Para os apps (todos ou um específico)."""
-    executions = stop_apps_command(name, path)
-    if not executions:
-        console.print("[yellow]Nenhum app para parar.[/yellow]")
-        return
+    try:
+        executions = stop_apps_command(name, path)
+        if not executions:
+            console.print("[yellow]Nenhum app para parar.[/yellow]")
+            return
 
-    for execution in executions:
-        console.print(f"🛑 Parando [bold]{execution.name}[/bold]...")
-        console.print(execution.output)
+        for execution in executions:
+            console.print(f"🛑 Parando [bold]{execution.name}[/bold]...")
+            console.print(execution.output)
+    except AppNotFoundError as e:
+        console.print(f"[bold red]Erro:[/bold red] {e}")
+        raise typer.Exit(code=1)
 
 
 @app.command()

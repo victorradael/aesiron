@@ -17,6 +17,7 @@ DNS_ZONE = "iron"
 DNS_PORT = 53
 DNS_CONFIG_FILENAME = "dnsmasq.conf"
 FALLBACK_RESOLVERS = ["1.1.1.1", "8.8.8.8"]
+FILE_HELPER_IMAGE = "alpine:3.20"
 GATEWAY_CONTAINER_NAME = "aesiron-gateway"
 GATEWAY_IMAGE = "nginx:1.27-alpine"
 GATEWAY_PORT = 80
@@ -91,6 +92,10 @@ def read_local_dns_state(armory_path: str | None = None) -> List[str]:
 
 def remove_local_dns_state(armory_path: str | None = None):
     get_local_dns_state_path(armory_path).unlink(missing_ok=True)
+
+
+def is_containerized_runtime() -> bool:
+    return Path("/.dockerenv").exists()
 
 
 def extract_container_target_port(container) -> str:
@@ -368,7 +373,15 @@ def render_hosts_file(current_content: str, hosts_block: str) -> str:
     return rendered.rstrip() + "\n"
 
 
-def write_system_hosts(content: str, target: Path = Path("/etc/hosts")):
+def write_system_hosts(
+    content: str,
+    target: Path = Path("/etc/hosts"),
+    armory_path: str | None = None,
+):
+    if is_containerized_runtime() and target == Path("/etc/hosts"):
+        write_host_file_via_helper(content, target, armory_path)
+        return
+
     target.parent.mkdir(parents=True, exist_ok=True)
     if os.geteuid() == 0:
         target.write_text(content, encoding="utf-8")
@@ -384,12 +397,53 @@ def write_system_hosts(content: str, target: Path = Path("/etc/hosts")):
         Path(temp_path).unlink(missing_ok=True)
 
 
+def read_system_hosts(target: Path = Path("/etc/hosts"), armory_path: str | None = None) -> str:
+    if is_containerized_runtime() and target == Path("/etc/hosts"):
+        return read_host_file_via_helper(target, armory_path)
+    if not target.exists():
+        return ""
+    return target.read_text(encoding="utf-8")
+
+
+def read_host_file_via_helper(target: Path, armory_path: str | None = None) -> str:
+    from .docker import get_docker_client
+
+    del armory_path
+    output = cast(Any, get_docker_client().containers).run(
+        FILE_HELPER_IMAGE,
+        command=["sh", "-c", "cat /target/hosts || true"],
+        remove=True,
+        volumes={
+            str(target): {"bind": "/target/hosts", "mode": "ro"},
+        },
+    )
+    return output.decode("utf-8") if isinstance(output, bytes) else str(output)
+
+
+def write_host_file_via_helper(content: str, target: Path, armory_path: str | None = None):
+    from .docker import get_docker_client
+
+    helper_source = get_infra_dir(armory_path) / "hosts.generated"
+    helper_source.write_text(content, encoding="utf-8")
+    host_source = resolve_docker_bind_path(helper_source)
+
+    cast(Any, get_docker_client().containers).run(
+        FILE_HELPER_IMAGE,
+        command=["sh", "-c", "cp /source/hosts.generated /target/hosts"],
+        remove=True,
+        volumes={
+            str(host_source.parent): {"bind": "/source", "mode": "ro"},
+            str(target): {"bind": "/target/hosts", "mode": "rw"},
+        },
+    )
+
+
 def reset_local_dns_client(
     armory_path: str | None = None, target: Path = Path("/etc/hosts")
 ) -> List[str]:
-    current_hosts = target.read_text(encoding="utf-8") if target.exists() else ""
+    current_hosts = read_system_hosts(target, armory_path)
     rendered_hosts = render_hosts_file(current_hosts, "")
-    write_system_hosts(rendered_hosts, target)
+    write_system_hosts(rendered_hosts, target, armory_path)
     remove_local_dns_state(armory_path)
     return [
         "Entradas locais do Aesiron removidas de /etc/hosts.",
@@ -405,10 +459,10 @@ def configure_local_dns_client(armory_path: str | None = None) -> List[str]:
     running_apps = get_running_app_names()
     hostnames = [get_app_hostname(app_name) for app_name in running_apps]
     target = Path("/etc/hosts")
-    current_hosts = target.read_text(encoding="utf-8") if target.exists() else ""
+    current_hosts = read_system_hosts(target, armory_path)
     hosts_block = build_hosts_block(host_ip, hostnames)
     rendered_hosts = render_hosts_file(current_hosts, hosts_block)
-    write_system_hosts(rendered_hosts, target)
+    write_system_hosts(rendered_hosts, target, armory_path)
     if hostnames:
         write_local_dns_state(hostnames, armory_path)
     else:

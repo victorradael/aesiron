@@ -126,8 +126,7 @@ class TestInfraHelpers:
 
         mocker.patch("aesiron.services.docker.get_host_ip", return_value="192.168.0.10")
         mocker.patch("aesiron.services.docker.get_running_app_names", return_value=["demo"])
-        mocker.patch("pathlib.Path.exists", return_value=True)
-        mocker.patch("pathlib.Path.read_text", return_value="127.0.0.1 localhost\n")
+        mocker.patch("aesiron.services.infra.read_system_hosts", return_value="127.0.0.1 localhost\n")
         mock_write_hosts = mocker.patch("aesiron.services.infra.write_system_hosts")
         mock_write_state = mocker.patch("aesiron.services.infra.write_local_dns_state")
 
@@ -143,11 +142,7 @@ class TestInfraHelpers:
         from aesiron.services.infra import reset_local_dns_client
 
         mocker.patch(
-            "pathlib.Path.exists",
-            return_value=True,
-        )
-        mocker.patch(
-            "pathlib.Path.read_text",
+            "aesiron.services.infra.read_system_hosts",
             return_value="127.0.0.1 localhost\n\n# >>> aesiron dns >>>\n192.168.0.10 demo.iron\n# <<< aesiron dns <<<\n",
         )
         mock_write_hosts = mocker.patch("aesiron.services.infra.write_system_hosts")
@@ -160,6 +155,14 @@ class TestInfraHelpers:
         assert "demo.iron" not in written
         assert "127.0.0.1 localhost" in written
         assert any("removidas" in line.lower() for line in lines)
+
+    def test_read_system_hosts_uses_helper_inside_container(self, mocker):
+        from aesiron.services.infra import read_system_hosts
+
+        mocker.patch("aesiron.services.infra.is_containerized_runtime", return_value=True)
+        mocker.patch("aesiron.services.infra.read_host_file_via_helper", return_value="127.0.0.1 localhost\n")
+
+        assert read_system_hosts() == "127.0.0.1 localhost\n"
 
     def test_read_local_dns_state_returns_saved_hostnames(self, tmp_path):
         from aesiron.services.infra import read_local_dns_state, write_local_dns_state

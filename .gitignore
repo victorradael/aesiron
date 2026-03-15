@@ -2,3 +2,7 @@
 __pycache__/
 .venv
 *.log
+.aesiron-infra/
+.ruff_cache/
+.pytest_cache/
+.vscode/

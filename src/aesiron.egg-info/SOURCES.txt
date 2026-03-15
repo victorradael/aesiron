@@ -10,11 +10,16 @@ src/aesiron.egg-info/dependency_links.txt
 src/aesiron.egg-info/entry_points.txt
 src/aesiron.egg-info/requires.txt
 src/aesiron.egg-info/top_level.txt
+src/aesiron/application/__init__.py
+src/aesiron/application/commands.py
+src/aesiron/application/dto.py
+src/aesiron/application/views.py
 src/aesiron/domain/__init__.py
 src/aesiron/domain/errors.py
 src/aesiron/services/__init__.py
 src/aesiron/services/armory.py
 src/aesiron/services/docker.py
+src/aesiron/services/infra.py
 src/aesiron/services/scaffold.py
 src/aesiron/services/status.py
 src/aesiron/template/.env.example
@@ -28,5 +33,8 @@ src/aesiron/template/app/core/logger.py
 src/aesiron/template/app/core/settings.py
 src/aesiron/template/app/ui/__init__.py
 src/aesiron/template/app/ui/components.py
+tests/test_application.py
 tests/test_cli.py
 tests/test_core.py
+tests/test_infra_service.py
+tests/test_status_service.py

@@ -4,7 +4,7 @@ Testes de integração para os novos comandos da CLI — Fase RED (TDD).
 Usa typer.testing.CliRunner e mocka as funções de core para testar apenas a camada CLI.
 """
 from typer.testing import CliRunner
-from aesiron.application.dto import AppLogsResult, AppStatus, AppStatusView, AppUrl, RenamedApp
+from aesiron.application.dto import AppLogsResult, AppStatus, AppStatusView, AppUrl, DnsSetupResult, RenamedApp
 from aesiron.cli import app
 
 runner = CliRunner()
@@ -89,7 +89,12 @@ class TestUrlsCommand:
         mocker.patch(
             "aesiron.cli.get_app_urls_view",
             return_value=[
-                AppUrl(name="my-app", port="8501", url="http://192.168.0.10:8501")
+                AppUrl(
+                    name="my-app",
+                    port="8501",
+                    lan_url="http://192.168.0.10:8501",
+                    dns_url="http://my-app.iron",
+                )
             ],
         )
 
@@ -97,7 +102,30 @@ class TestUrlsCommand:
 
         assert result.exit_code == 0
         assert "my-app" in result.output
-        assert "192.168.0.10:8501" in result.output
+        assert "http://192.168.0.10:8501" in result.output
+        assert "http://my-app.iron" in result.output
+
+    def test_dns_setup_renders_manual_instructions(self, mocker):
+        mocker.patch(
+            "aesiron.cli.configure_dns_client_command",
+            return_value=DnsSetupResult(lines=["Servidor DNS configurado nesta maquina: 192.168.0.10"]),
+        )
+
+        result = runner.invoke(app, ["dns-setup"])
+
+        assert result.exit_code == 0
+        assert "192.168.0.10" in result.output
+
+    def test_dns_reset_renders_cleanup_message(self, mocker):
+        mocker.patch(
+            "aesiron.cli.reset_dns_client_command",
+            return_value=DnsSetupResult(lines=["Entradas locais do Aesiron removidas de /etc/hosts."]),
+        )
+
+        result = runner.invoke(app, ["dns-reset"])
+
+        assert result.exit_code == 0
+        assert "removida" in result.output.lower()
 
 
 # ---------------------------------------------------------------------------

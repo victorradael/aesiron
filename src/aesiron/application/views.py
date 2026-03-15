@@ -16,7 +16,8 @@ def get_apps_overview(path: Optional[str] = None):
     return [AppOverview(name=app_name, running=app_name in running) for app_name in apps]
 
 
-def get_app_urls_view():
+def get_app_urls_view(path: Optional[str] = None):
+    del path
     return [AppUrl(**app_url) for app_url in get_app_urls()]
 
 

@@ -12,7 +12,8 @@ class AppOverview:
 class AppUrl:
     name: str
     port: str
-    url: str
+    lan_url: str
+    dns_url: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -60,3 +61,13 @@ class AppLogsResult:
     output: Union[str, Iterable[Union[bytes, str]]]
     tail: int
     path: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class DnsSetupView:
+    lines: List[str]
+
+
+@dataclass(frozen=True)
+class DnsSetupResult:
+    lines: List[str]

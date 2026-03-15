@@ -85,7 +85,7 @@ class TestCoreHelpers:
     def test_render_template_content_uses_host_pwd_when_available(self):
         from aesiron import core
 
-        content = "{{APP_NAME}} {{PORT}} {{APP_HOST_PATH}}"
+        content = "{{APP_NAME}} {{PORT}} {{APP_HOST_PATH}} {{APP_HOSTNAME}}"
 
         rendered = core.render_template_content(
             content,
@@ -94,7 +94,7 @@ class TestCoreHelpers:
             env={"HOST_PWD": "/workspace"},
         )
 
-        assert rendered == "my-app 8501 /workspace/my-app"
+        assert rendered == "my-app 8501 /workspace/my-app my-app.iron"
 
     def test_list_apps_does_not_create_missing_armory_dir(self, tmp_path):
         from aesiron import core
@@ -115,6 +115,7 @@ class TestCoreHelpers:
 
         mocker.patch("aesiron.services.docker.get_host_ip", return_value="192.168.0.10")
         mocker.patch("aesiron.services.docker.get_running_containers", return_value=[fake_container])
+        mocker.patch("aesiron.services.docker.resolve_hostname_locally", return_value="192.168.0.10")
 
         result = core.get_app_urls()
 
@@ -122,9 +123,38 @@ class TestCoreHelpers:
             {
                 "name": "my-app",
                 "port": "8501",
-                "url": "http://192.168.0.10:8501",
+                "lan_url": "http://192.168.0.10:8501",
+                "dns_url": "http://my-app.iron",
             }
         ]
+
+    def test_get_app_hostname_normalizes_name(self):
+        from aesiron import core
+
+        assert core.get_app_hostname(" Meu_App 01 ") == "meu-app-01.iron"
+
+    def test_build_dnsmasq_config_points_zone_to_host_ip(self):
+        from aesiron import core
+
+        config = core.build_dnsmasq_config("192.168.0.10", ["1.1.1.1"])
+
+        assert "address=/.iron/192.168.0.10" in config
+        assert "server=1.1.1.1" in config
+
+    def test_ensure_streamlit_runtime_config_adds_proxy_settings(self, tmp_path):
+        from aesiron.services.scaffold import ensure_streamlit_runtime_config
+
+        config_dir = tmp_path / "app" / ".streamlit"
+        config_dir.mkdir(parents=True)
+        config_path = config_dir / "config.toml"
+        config_path.write_text("[server]\nport = 8501\n", encoding="utf-8")
+
+        ensure_streamlit_runtime_config(tmp_path)
+
+        content = config_path.read_text(encoding="utf-8")
+        assert 'address = "0.0.0.0"' in content
+        assert "enableCORS = false" in content
+        assert "enableXsrfProtection = false" in content
 
 
 # ---------------------------------------------------------------------------

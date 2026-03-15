@@ -3,6 +3,7 @@ from typing import Optional
 from rich.console import Console
 from rich.table import Table
 from .application import (
+    configure_dns_client_command,
     destroy_app_command,
     forge_app_command,
     get_app_logs_command,
@@ -12,6 +13,7 @@ from .application import (
     initialize_armory,
     rename_app_command,
     resolve_target_apps,
+    reset_dns_client_command,
     restart_apps_command,
     run_apps_command,
     stop_apps_command,
@@ -191,10 +193,44 @@ def urls():
         "[bold cyan]└──────────────────────────────────────────────────────────┘[/bold cyan]"
     )
 
+    table = Table(border_style="cyan")
+    table.add_column("App", style="bold yellow")
+    table.add_column("LAN", style="green")
+    table.add_column("DNS local", style="cyan")
+
     for app_data in app_urls:
-        console.print(
-            f"  [bold yellow]{app_data.name:15}[/bold yellow] [bold green]➜[/bold green]  {app_data.url}"
+        table.add_row(
+            app_data.name,
+            app_data.lan_url,
+            app_data.dns_url or "[dim]Nao configurado[/dim]",
         )
+
+    console.print(table)
+    console.print(
+        "\n[dim]Use `aesiron dns-setup` nesta maquina para configurar o resolvedor local automaticamente.[/dim]"
+    )
+    console.print("")
+
+
+@app.command(name="dns-setup")
+def dns_setup(
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
+    """Configura apenas esta maquina para resolver hosts do Aesiron sem trocar o DNS global."""
+    setup = configure_dns_client_command(path)
+    console.print("[bold cyan]Configuracao local de DNS aplicada[/bold cyan]\n")
+    for line in setup.lines:
+        console.print(f"- {line}")
+    console.print("")
+
+
+@app.command(name="dns-reset")
+def dns_reset():
+    """Remove as entradas locais do Aesiron do /etc/hosts."""
+    result = reset_dns_client_command()
+    console.print("[bold cyan]Configuracao local de DNS removida[/bold cyan]\n")
+    for line in result.lines:
+        console.print(f"- {line}")
     console.print("")
 
 

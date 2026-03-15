@@ -7,11 +7,18 @@ from rich.console import Console
 
 from ..domain.errors import AppAlreadyExistsError
 from .armory import get_armory_dir
+from .infra import get_app_hostname
 
 console = Console()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = BASE_DIR / "template"
+STREAMLIT_RUNTIME_LINES = [
+    'address = "0.0.0.0"',
+    "headless = true",
+    "enableCORS = false",
+    "enableXsrfProtection = false",
+]
 
 
 def render_template_content(
@@ -24,6 +31,7 @@ def render_template_content(
         content.replace("{{APP_NAME}}", name)
         .replace("{{PORT}}", str(port))
         .replace("{{APP_HOST_PATH}}", app_host_path)
+        .replace("{{APP_HOSTNAME}}", get_app_hostname(name))
     )
 
 
@@ -55,6 +63,20 @@ def copy_default_env(app_dir: Path):
     env_example = app_dir / ".env.example"
     if env_example.exists():
         shutil.copy2(env_example, app_dir / ".env")
+
+
+def ensure_streamlit_runtime_config(app_dir: Path):
+    config_path = app_dir / "app" / ".streamlit" / "config.toml"
+    if not config_path.exists():
+        return
+
+    content = config_path.read_text(encoding="utf-8")
+    missing_lines = [line for line in STREAMLIT_RUNTIME_LINES if line not in content]
+    if not missing_lines:
+        return
+
+    updated = content.rstrip() + "\n" + "\n".join(missing_lines) + "\n"
+    config_path.write_text(updated, encoding="utf-8")
 
 
 def apply_host_ownership(app_dir: Path, env: Optional[Mapping[str, str]] = None):
@@ -110,5 +132,6 @@ def forge_app(name: str, port: int, armory_path: Optional[str] = None):
     copy_template_tree(TEMPLATE_DIR, app_dir)
     apply_template_placeholders(app_dir, name, port)
     copy_default_env(app_dir)
+    ensure_streamlit_runtime_config(app_dir)
     apply_host_ownership(app_dir)
     return app_dir

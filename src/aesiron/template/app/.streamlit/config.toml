@@ -6,4 +6,8 @@ textColor = "#333"
 font = "sans serif"
 
 [server]
+address = "0.0.0.0"
+headless = true
 port = {{PORT}}
+enableCORS = false
+enableXsrfProtection = false

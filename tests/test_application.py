@@ -40,7 +40,6 @@ class TestApplicationViews:
         assert result.running_names == {"app-2"}
         assert result.status_map["app-2"].port == "8501"
 
-
 class TestApplicationCommands:
     def test_initialize_armory_delegates_to_service(self, mocker):
         from aesiron.application.commands import initialize_armory
@@ -58,6 +57,7 @@ class TestApplicationCommands:
             "aesiron.application.commands.run_docker_command",
             side_effect=["up-1", "up-2"],
         )
+        mock_sync = mocker.patch("aesiron.application.commands.sync_network_infra")
 
         result = run_apps_command(path="/tmp/armory")
 
@@ -66,28 +66,45 @@ class TestApplicationCommands:
             CommandExecution(name="app-2", output="up-2"),
         ]
         assert mock_run.call_count == 2
+        mock_sync.assert_called_once_with("/tmp/armory")
 
     def test_restart_apps_command_restarts_all_targets(self, mocker):
         from aesiron.application.commands import restart_apps_command
 
         mocker.patch("aesiron.application.commands.resolve_target_apps", return_value=["app-1", "app-2"])
         mock_restart = mocker.patch("aesiron.application.commands.restart_app")
+        mock_sync = mocker.patch("aesiron.application.commands.sync_network_infra")
 
         result = restart_apps_command(path="/tmp/armory")
 
         assert result == ["app-1", "app-2"]
         mock_restart.assert_any_call("app-1", "/tmp/armory")
         mock_restart.assert_any_call("app-2", "/tmp/armory")
+        mock_sync.assert_called_once_with("/tmp/armory")
+
+    def test_destroy_app_command_syncs_infra(self, mocker):
+        from aesiron.application.commands import destroy_app_command
+
+        mock_destroy = mocker.patch("aesiron.application.commands.destroy_app")
+        mock_sync = mocker.patch("aesiron.application.commands.sync_network_infra")
+
+        result = destroy_app_command("app-1", "/tmp/armory")
+
+        mock_destroy.assert_called_once_with("app-1", "/tmp/armory")
+        mock_sync.assert_called_once_with("/tmp/armory")
+        assert result.name == "app-1"
 
     def test_rename_app_command_returns_payload(self, mocker):
         from aesiron.application.dto import RenamedApp
         from aesiron.application.commands import rename_app_command
 
         mock_rename = mocker.patch("aesiron.application.commands.rename_app")
+        mock_sync = mocker.patch("aesiron.application.commands.sync_network_infra")
 
         result = rename_app_command("old", "new", "/tmp/armory")
 
         mock_rename.assert_called_once_with("old", "new", "/tmp/armory")
+        mock_sync.assert_called_once_with("/tmp/armory")
         assert result == RenamedApp(old_name="old", new_name="new")
 
     def test_get_app_logs_command_returns_dto(self, mocker):
@@ -104,3 +121,27 @@ class TestApplicationCommands:
         assert result.tail == 20
         assert result.follow is False
         assert result.output == "linha1\nlinha2\n"
+
+    def test_configure_dns_client_command_returns_result(self, mocker):
+        from aesiron.application.commands import configure_dns_client_command
+
+        mocker.patch(
+            "aesiron.application.commands.configure_local_dns_client",
+            return_value=["Servidor DNS configurado nesta maquina: 192.168.0.10"],
+        )
+
+        result = configure_dns_client_command("/tmp/armory")
+
+        assert result.lines == ["Servidor DNS configurado nesta maquina: 192.168.0.10"]
+
+    def test_reset_dns_client_command_returns_result(self, mocker):
+        from aesiron.application.commands import reset_dns_client_command
+
+        mocker.patch(
+            "aesiron.application.commands.reset_local_dns_client",
+            return_value=["Entradas locais do Aesiron removidas de /etc/hosts."],
+        )
+
+        result = reset_dns_client_command()
+
+        assert result.lines == ["Entradas locais do Aesiron removidas de /etc/hosts."]

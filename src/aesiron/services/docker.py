@@ -6,12 +6,15 @@ from typing import Mapping, Optional
 
 import docker
 from docker.errors import NotFound
+from docker.types import IPAMConfig, IPAMPool
 
 from ..domain.errors import AppAlreadyExistsError, AppNotFoundError
 from .armory import get_armory_dir
-from .scaffold import rewrite_app_references
+from .scaffold import ensure_streamlit_runtime_config, rewrite_app_references
 
 client = None
+NETWORK_NAME = "aesiron-net"
+NETWORK_SUBNET = "172.28.0.0/24"
 
 
 def get_docker_client():
@@ -21,12 +24,14 @@ def get_docker_client():
     return client
 
 
-def ensure_network(network_name: str = "aesiron-net"):
+def ensure_network(network_name: str = NETWORK_NAME):
     docker_client = get_docker_client()
     try:
         docker_client.networks.get(network_name)
     except NotFound:
-        docker_client.networks.create(network_name, driver="bridge")
+        ipam_pool = IPAMPool(subnet=NETWORK_SUBNET)
+        ipam_config = IPAMConfig(pool_configs=[ipam_pool])
+        docker_client.networks.create(network_name, driver="bridge", ipam=ipam_config)
 
 
 def run_make_target(app_dir: Path, command: str):
@@ -42,6 +47,7 @@ def run_docker_command(app_name: str, command: str, armory_path: Optional[str] =
     if not app_dir.exists():
         raise AppNotFoundError(f"App {app_name} not found in {armory}.")
 
+    ensure_streamlit_runtime_config(app_dir)
     ensure_network()
     result = run_make_target(app_dir, command)
     return result.stdout + result.stderr
@@ -152,16 +158,41 @@ def extract_container_port(container):
     return ""
 
 
+def resolve_hostname_locally(hostname: str):
+    try:
+        return socket.gethostbyname(hostname)
+    except OSError:
+        return None
+
+
 def get_app_urls():
-    ip = get_host_ip()
+    from .infra import get_app_url
+
+    host_ip = get_host_ip()
+
     return [
         {
             "name": str(container.name).replace("app-aesiron-", ""),
             "port": extract_container_port(container),
-            "url": f"http://{ip}:{extract_container_port(container)}",
+            "lan_url": f"http://{host_ip}:{extract_container_port(container)}",
+            "dns_url": _build_dns_url_if_available(
+                str(container.name).replace("app-aesiron-", ""),
+                expected_ip=host_ip,
+                build_url=get_app_url,
+            ),
         }
         for container in get_running_containers()
     ]
+
+
+def _build_dns_url_if_available(app_name: str, expected_ip: str, build_url):
+    hostname = build_url(app_name)
+    if hostname.startswith("http://"):
+        hostname = hostname[len("http://") :]
+    resolved_ip = resolve_hostname_locally(hostname)
+    if resolved_ip != expected_ip:
+        return None
+    return f"http://{hostname}"
 
 
 def rename_app(old_name: str, new_name: str, armory_path: Optional[str] = None):

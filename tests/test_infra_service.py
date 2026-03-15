@@ -164,6 +164,28 @@ class TestInfraHelpers:
 
         assert read_system_hosts() == "127.0.0.1 localhost\n"
 
+    def test_write_host_file_via_helper_uses_shell_redirection(self, mocker, tmp_path):
+        from aesiron.services.infra import write_host_file_via_helper
+
+        mocker.patch("aesiron.services.infra.get_infra_dir", return_value=tmp_path)
+        mocker.patch(
+            "aesiron.services.infra.resolve_docker_bind_path",
+            return_value=tmp_path / "hosts.generated",
+        )
+        fake_containers = MagicMock()
+        mocker.patch(
+            "aesiron.services.docker.get_docker_client",
+            return_value=MagicMock(containers=fake_containers),
+        )
+
+        write_host_file_via_helper("127.0.0.1 localhost\n", Path("/etc/hosts"), "/tmp/armory")
+
+        assert fake_containers.run.call_args.kwargs["command"] == [
+            "sh",
+            "-c",
+            "cat /source/hosts.generated > /target/hosts",
+        ]
+
     def test_read_local_dns_state_returns_saved_hostnames(self, tmp_path):
         from aesiron.services.infra import read_local_dns_state, write_local_dns_state
 

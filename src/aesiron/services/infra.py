@@ -429,7 +429,7 @@ def write_host_file_via_helper(content: str, target: Path, armory_path: str | No
 
     cast(Any, get_docker_client().containers).run(
         FILE_HELPER_IMAGE,
-        command=["sh", "-c", "cp /source/hosts.generated /target/hosts"],
+        command=["sh", "-c", "cat /source/hosts.generated > /target/hosts"],
         remove=True,
         volumes={
             str(host_source.parent): {"bind": "/source", "mode": "ro"},

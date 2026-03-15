@@ -29,7 +29,8 @@ class TestInfraHelpers:
         config = build_gateway_config([fake_container])
 
         assert "server_name demo-app.iron;" in config
-        assert "proxy_pass http://app-aesiron-demo-app:8600;" in config
+        assert "set $upstream http://app-aesiron-demo-app:8600;" in config
+        assert "proxy_pass $upstream;" in config
         assert "proxy_set_header Upgrade $http_upgrade;" in config
         assert "proxy_buffering off;" in config
 

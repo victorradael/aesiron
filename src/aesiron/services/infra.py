@@ -163,7 +163,8 @@ def build_gateway_config(containers: Sequence[Any]) -> str:
                     server_name {hostname};
 
                     location / {{
-                        proxy_pass http://{container.name}:{target_port};
+                        set $upstream http://{container.name}:{target_port};
+                        proxy_pass $upstream;
                         proxy_http_version 1.1;
                         proxy_set_header Upgrade $http_upgrade;
                         proxy_set_header Connection $connection_upgrade;

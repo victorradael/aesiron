@@ -65,14 +65,28 @@ def copy_default_env(app_dir: Path):
         shutil.copy2(env_example, app_dir / ".env")
 
 
-def ensure_streamlit_runtime_config(app_dir: Path):
-    config_path = app_dir / "app" / ".streamlit" / "config.toml"
+def ensure_streamlit_runtime_config(app_dir: Path, port: int):
+    streamlit_dir = app_dir / "app" / ".streamlit"
+    streamlit_dir.mkdir(parents=True, exist_ok=True)
+    
+    config_path = streamlit_dir / "config.toml"
     if not config_path.exists():
-        return
+        config_path.touch()
 
     content = config_path.read_text(encoding="utf-8")
+    
+    # Garantir que a porta esteja correta no config.toml
+    if f"port = {port}" not in content:
+        import re
+        if "port =" in content:
+            content = re.sub(r"port = \{\{PORT\}\}", f"port = {port}", content)
+            content = re.sub(r"port = \d+", f"port = {port}", content)
+        else:
+            content = content.rstrip() + f"\n\n[server]\nport = {port}\n"
+    
     missing_lines = [line for line in STREAMLIT_RUNTIME_LINES if line not in content]
     if not missing_lines:
+        config_path.write_text(content, encoding="utf-8")
         return
 
     updated = content.rstrip() + "\n" + "\n".join(missing_lines) + "\n"
@@ -132,6 +146,6 @@ def forge_app(name: str, port: int, armory_path: Optional[str] = None):
     copy_template_tree(TEMPLATE_DIR, app_dir)
     apply_template_placeholders(app_dir, name, port)
     copy_default_env(app_dir)
-    ensure_streamlit_runtime_config(app_dir)
+    ensure_streamlit_runtime_config(app_dir, port)
     apply_host_ownership(app_dir)
     return app_dir

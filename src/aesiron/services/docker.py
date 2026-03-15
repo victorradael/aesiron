@@ -47,7 +47,29 @@ def run_docker_command(app_name: str, command: str, armory_path: Optional[str] =
     if not app_dir.exists():
         raise AppNotFoundError(f"App {app_name} not found in {armory}.")
 
-    ensure_streamlit_runtime_config(app_dir)
+    # Extrair porta do compose.yml para garantir que o runtime esteja sincronizado
+    port = None
+    compose_path = app_dir / "compose.yml"
+    if not compose_path.exists():
+        compose_path = app_dir / "docker-compose.yml"
+    
+    if compose_path.exists():
+        import yaml
+        try:
+            with open(compose_path, 'r') as f:
+                config = yaml.safe_load(f)
+                services = config.get("services", {})
+                for service in services.values():
+                    ports_list = service.get("ports", [])
+                    for p in ports_list:
+                        if isinstance(p, str):
+                            port = int(p.split(":")[0])
+                        elif isinstance(p, dict):
+                            port = int(p.get("published"))
+        except (Exception, ValueError):
+            pass
+
+    ensure_streamlit_runtime_config(app_dir, port or 8501)
     ensure_network()
     result = run_make_target(app_dir, command)
     return result.stdout + result.stderr
@@ -156,6 +178,72 @@ def extract_container_port(container):
         if port_data:
             return port_data[0].get("HostPort", "")
     return ""
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", port)) == 0
+
+
+def find_next_available_port(start_port: int = 8501, armory_path: Optional[str] = None) -> int:
+    used_ports = set()
+    
+    # 1. Check running containers
+    current_containers = get_running_containers()
+    for container in current_containers:
+        ports = container.attrs.get("NetworkSettings", {}).get("Ports", {})
+        if ports:
+            for host_bindings in ports.values():
+                if host_bindings:
+                    for binding in host_bindings:
+                        try:
+                            used_ports.add(int(binding.get("HostPort", 0)))
+                        except (ValueError, TypeError):
+                            pass
+        
+    # 2. Check all forged apps in the armory (even if not running)
+    from .armory import get_armory_dir
+    import yaml
+    
+    armory = get_armory_dir(armory_path, create=False)
+    if armory.exists():
+        for app_dir in armory.iterdir():
+            if not app_dir.is_dir():
+                continue
+            compose_path = app_dir / "compose.yml"
+            if not compose_path.exists():
+                compose_path = app_dir / "docker-compose.yml"
+            
+            if compose_path.exists():
+                try:
+                    with open(compose_path, 'r') as f:
+                        config = yaml.safe_load(f)
+                        services = config.get("services", {})
+                        for service in services.values():
+                            ports_list = service.get("ports", [])
+                            for p in ports_list:
+                                if isinstance(p, str):
+                                    # Handle "HOST:CONTAINER" or just "PORT"
+                                    host_port = p.split(":")[0]
+                                    try:
+                                        used_ports.add(int(host_port))
+                                    except ValueError:
+                                        pass
+                                elif isinstance(p, dict):
+                                    host_port = p.get("published")
+                                    if host_port:
+                                        try:
+                                            used_ports.add(int(host_port))
+                                        except ValueError:
+                                            pass
+                except Exception:
+                    # Ignore malformed or unreadable files
+                    pass
+
+    port = start_port
+    while port in used_ports or is_port_in_use(port):
+        port += 1
+    return port
 
 
 def resolve_hostname_locally(hostname: str):

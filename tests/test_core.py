@@ -149,7 +149,7 @@ class TestCoreHelpers:
         config_path = config_dir / "config.toml"
         config_path.write_text("[server]\nport = 8501\n", encoding="utf-8")
 
-        ensure_streamlit_runtime_config(tmp_path)
+        ensure_streamlit_runtime_config(tmp_path, port=8501)
 
         content = config_path.read_text(encoding="utf-8")
         assert 'address = "0.0.0.0"' in content

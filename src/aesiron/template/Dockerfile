@@ -11,7 +11,7 @@ RUN pip install -r requirements.txt
 # Copia todo o conteúdo do diretório atual para /app no contêiner
 COPY ./app /app
 
-EXPOSE 8501
+EXPOSE {{PORT}}
 
 CMD ["streamlit", "run", "app.py"]
 

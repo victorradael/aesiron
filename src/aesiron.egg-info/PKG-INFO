@@ -69,16 +69,43 @@ O Aesiron gerencia um **Arsenal (Armory)**: diretório atual (`cwd`) onde seus a
     aesiron run          # Sobe TODOS os apps encontrados na pasta
     aesiron list         # Mostra quais apps estão rodando
     aesiron urls         # Exibe as URLs de acesso de todos os apps
-    aesiron dns-setup    # Configura o DNS desta maquina para resolver *.iron
+    aesiron dns-setup    # Configura apenas esta maquina para resolver *.iron via /etc/hosts
+    aesiron dns-reset    # Remove as entradas locais do Aesiron do /etc/hosts
     ```
 
 3.  **DNS da Rede Local**:
     O Aesiron pode expor os apps por hostnames como `http://meu-app.iron`, desde que os dispositivos da sua rede usem o DNS da maquina onde o Aesiron esta rodando.
 
-    Para configurar automaticamente o DNS da maquina atual e fazer o resolvedor local usar o Aesiron:
+    Para configurar apenas a maquina atual sem alterar o DNS global do sistema:
     ```bash
     aesiron dns-setup
     ```
+
+### Arquitetura da Rede Interna
+
+```mermaid
+flowchart LR
+    Cliente[Cliente na LAN]
+    DNSLocal[Resolvedor local ou cliente configurado]
+    DNS[Aesiron DNS\ndnsmasq :53]
+    Gateway[Aesiron Gateway\nnginx :80]
+    App1[app-aesiron-xpto\nStreamlit :8501]
+    App2[app-aesiron-xpto2\nStreamlit :8502]
+
+    Cliente -->|consulta xpto.iron| DNSLocal
+    DNSLocal -->|usa DNS configurado| DNS
+    DNS -->|responde IP LAN do host| Cliente
+    Cliente -->|HTTP Host: xpto.iron| Gateway
+    Gateway -->|proxy reverso| App1
+    Cliente -->|HTTP Host: xpto2.iron| Gateway
+    Gateway -->|proxy reverso| App2
+```
+
+- `dnsmasq` responde qualquer `*.iron` com o IP LAN da maquina onde o Aesiron roda para clientes da rede que apontarem para esse DNS.
+- `nginx` recebe a requisicao HTTP e escolhe o app certo pelo hostname.
+- `aesiron dns-setup` nao troca o DNS global da maquina; ele escreve apenas entradas gerenciadas no `/etc/hosts` para os apps ativos.
+- os containers de DNS e gateway sao efemeros e so existem quando ha apps ativos para expor.
+- os arquivos em `.aesiron-infra/` sao gerados dinamicamente e nao devem ser versionados.
 
 ---
 

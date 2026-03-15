@@ -129,10 +129,12 @@ class TestInfraHelpers:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("pathlib.Path.read_text", return_value="127.0.0.1 localhost\n")
         mock_write_hosts = mocker.patch("aesiron.services.infra.write_system_hosts")
+        mock_write_state = mocker.patch("aesiron.services.infra.write_local_dns_state")
 
         lines = configure_local_dns_client("/tmp/armory")
 
         mock_write_hosts.assert_called_once()
+        mock_write_state.assert_called_once_with(["demo.iron"], "/tmp/armory")
         written = mock_write_hosts.call_args.args[0]
         assert "demo.iron" in written
         assert any("192.168.0.10" in line for line in lines)
@@ -149,10 +151,19 @@ class TestInfraHelpers:
             return_value="127.0.0.1 localhost\n\n# >>> aesiron dns >>>\n192.168.0.10 demo.iron\n# <<< aesiron dns <<<\n",
         )
         mock_write_hosts = mocker.patch("aesiron.services.infra.write_system_hosts")
+        mock_remove_state = mocker.patch("aesiron.services.infra.remove_local_dns_state")
 
-        lines = reset_local_dns_client()
+        lines = reset_local_dns_client("/tmp/armory")
 
         written = mock_write_hosts.call_args.args[0]
+        mock_remove_state.assert_called_once_with("/tmp/armory")
         assert "demo.iron" not in written
         assert "127.0.0.1 localhost" in written
         assert any("removidas" in line.lower() for line in lines)
+
+    def test_read_local_dns_state_returns_saved_hostnames(self, tmp_path):
+        from aesiron.services.infra import read_local_dns_state, write_local_dns_state
+
+        write_local_dns_state(["demo.iron", "api.iron"], str(tmp_path))
+
+        assert read_local_dns_state(str(tmp_path)) == ["api.iron", "demo.iron"]

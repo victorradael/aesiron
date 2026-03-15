@@ -142,6 +142,6 @@ class TestApplicationCommands:
             return_value=["Entradas locais do Aesiron removidas de /etc/hosts."],
         )
 
-        result = reset_dns_client_command()
+        result = reset_dns_client_command("/tmp/armory")
 
         assert result.lines == ["Entradas locais do Aesiron removidas de /etc/hosts."]

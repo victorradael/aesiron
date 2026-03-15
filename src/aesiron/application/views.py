@@ -17,8 +17,7 @@ def get_apps_overview(path: Optional[str] = None):
 
 
 def get_app_urls_view(path: Optional[str] = None):
-    del path
-    return [AppUrl(**app_url) for app_url in get_app_urls()]
+    return [AppUrl(**app_url) for app_url in get_app_urls(path)]
 
 
 def get_app_status_view(path: Optional[str] = None):

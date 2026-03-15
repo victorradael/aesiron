@@ -153,7 +153,7 @@ def run(
         console.print(f"🚀 Iniciando [bold]{execution.name}[/bold]...")
         console.print(execution.output)
 
-    urls()
+    urls(path)
 
 
 @app.command()
@@ -173,9 +173,11 @@ def stop(
 
 
 @app.command()
-def urls():
+def urls(
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
     """Mostra as URLs de acesso local para os apps rodando."""
-    app_urls = get_app_urls_view()
+    app_urls = get_app_urls_view(path)
 
     if not app_urls:
         console.print(
@@ -225,9 +227,11 @@ def dns_setup(
 
 
 @app.command(name="dns-reset")
-def dns_reset():
+def dns_reset(
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Caminho do Arsenal"),
+):
     """Remove as entradas locais do Aesiron do /etc/hosts."""
-    result = reset_dns_client_command()
+    result = reset_dns_client_command(path)
     console.print("[bold cyan]Configuracao local de DNS removida[/bold cyan]\n")
     for line in result.lines:
         console.print(f"- {line}")

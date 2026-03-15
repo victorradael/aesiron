@@ -165,10 +165,11 @@ def resolve_hostname_locally(hostname: str):
         return None
 
 
-def get_app_urls():
-    from .infra import get_app_url
+def get_app_urls(armory_path: Optional[str] = None):
+    from .infra import get_app_url, read_local_dns_state
 
     host_ip = get_host_ip()
+    configured_hostnames = set(read_local_dns_state(armory_path))
 
     return [
         {
@@ -179,16 +180,19 @@ def get_app_urls():
                 str(container.name).replace("app-aesiron-", ""),
                 expected_ip=host_ip,
                 build_url=get_app_url,
+                configured_hostnames=configured_hostnames,
             ),
         }
         for container in get_running_containers()
     ]
 
 
-def _build_dns_url_if_available(app_name: str, expected_ip: str, build_url):
+def _build_dns_url_if_available(app_name: str, expected_ip: str, build_url, configured_hostnames):
     hostname = build_url(app_name)
     if hostname.startswith("http://"):
         hostname = hostname[len("http://") :]
+    if hostname in configured_hostnames:
+        return f"http://{hostname}"
     resolved_ip = resolve_hostname_locally(hostname)
     if resolved_ip != expected_ip:
         return None

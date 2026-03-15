@@ -66,8 +66,8 @@ def configure_dns_client_command(path: Optional[str] = None):
     return DnsSetupResult(lines=configure_local_dns_client(path))
 
 
-def reset_dns_client_command():
-    return DnsSetupResult(lines=reset_local_dns_client())
+def reset_dns_client_command(path: Optional[str] = None):
+    return DnsSetupResult(lines=reset_local_dns_client(path))
 
 
 def get_app_logs_command(

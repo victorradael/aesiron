@@ -115,7 +115,7 @@ class TestCoreHelpers:
 
         mocker.patch("aesiron.services.docker.get_host_ip", return_value="192.168.0.10")
         mocker.patch("aesiron.services.docker.get_running_containers", return_value=[fake_container])
-        mocker.patch("aesiron.services.docker.resolve_hostname_locally", return_value="192.168.0.10")
+        mocker.patch("aesiron.services.infra.read_local_dns_state", return_value=["my-app.iron"])
 
         result = core.get_app_urls()
 

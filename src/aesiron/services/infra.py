@@ -22,6 +22,7 @@ GATEWAY_IMAGE = "nginx:1.27-alpine"
 GATEWAY_PORT = 80
 GATEWAY_CONFIG_FILENAME = "nginx.conf"
 INFRA_DIR_NAME = ".aesiron-infra"
+LOCAL_DNS_STATE_FILENAME = "local-dns-hosts.txt"
 NETWORK_NAME = "aesiron-net"
 HOSTS_BEGIN_MARKER = "# >>> aesiron dns >>>"
 HOSTS_END_MARKER = "# <<< aesiron dns <<<"
@@ -70,6 +71,26 @@ def get_gateway_config_path(armory_path: str | None = None) -> Path:
 
 def get_dns_config_path(armory_path: str | None = None) -> Path:
     return get_infra_dir(armory_path) / DNS_CONFIG_FILENAME
+
+
+def get_local_dns_state_path(armory_path: str | None = None) -> Path:
+    return get_infra_dir(armory_path) / LOCAL_DNS_STATE_FILENAME
+
+
+def write_local_dns_state(hostnames: Sequence[str], armory_path: str | None = None):
+    state_path = get_local_dns_state_path(armory_path)
+    state_path.write_text("\n".join(sorted(set(hostnames))) + "\n", encoding="utf-8")
+
+
+def read_local_dns_state(armory_path: str | None = None) -> List[str]:
+    state_path = get_local_dns_state_path(armory_path)
+    if not state_path.exists():
+        return []
+    return [line.strip() for line in state_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def remove_local_dns_state(armory_path: str | None = None):
+    get_local_dns_state_path(armory_path).unlink(missing_ok=True)
 
 
 def extract_container_target_port(container) -> str:
@@ -225,7 +246,7 @@ def remove_infra_containers():
 
 
 def remove_infra_state(armory_path: str | None = None):
-    infra_dir = get_infra_dir(armory_path)
+    infra_dir = get_armory_dir(armory_path) / INFRA_DIR_NAME
     if infra_dir.exists():
         shutil.rmtree(infra_dir)
 
@@ -363,10 +384,13 @@ def write_system_hosts(content: str, target: Path = Path("/etc/hosts")):
         Path(temp_path).unlink(missing_ok=True)
 
 
-def reset_local_dns_client(target: Path = Path("/etc/hosts")) -> List[str]:
+def reset_local_dns_client(
+    armory_path: str | None = None, target: Path = Path("/etc/hosts")
+) -> List[str]:
     current_hosts = target.read_text(encoding="utf-8") if target.exists() else ""
     rendered_hosts = render_hosts_file(current_hosts, "")
     write_system_hosts(rendered_hosts, target)
+    remove_local_dns_state(armory_path)
     return [
         "Entradas locais do Aesiron removidas de /etc/hosts.",
         "O DNS global da maquina nao foi alterado.",
@@ -385,6 +409,10 @@ def configure_local_dns_client(armory_path: str | None = None) -> List[str]:
     hosts_block = build_hosts_block(host_ip, hostnames)
     rendered_hosts = render_hosts_file(current_hosts, hosts_block)
     write_system_hosts(rendered_hosts, target)
+    if hostnames:
+        write_local_dns_state(hostnames, armory_path)
+    else:
+        remove_local_dns_state(armory_path)
 
     if not hostnames:
         return [
